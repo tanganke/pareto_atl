@@ -1,0 +1,9 @@
+defaults:
+  - clip_default
+  - _self_
+
+init_lambda: 0.3
+
+checkpoint_dir: null
+pareto_tta: true
+evaluate: true

@@ -1,18 +1,24 @@
-import torch.nn as nn
+from typing import Dict, List, Optional
+
 import torch
-from typing import Optional, List, Dict
+import torch.nn as nn
 
 
 class MultiOutputClassifier(nn.Module):
-    def __init__(self, backbone: nn.Module, heads: nn.ModuleDict, bottleneck: Optional[nn.Module] = None,
-                 bottleneck_dim: Optional[int] = -1,
-                 finetune=True, pool_layer=None):
+    def __init__(
+        self,
+        backbone: nn.Module,
+        heads: nn.ModuleDict,
+        bottleneck: Optional[nn.Module] = None,
+        bottleneck_dim: Optional[int] = -1,
+        finetune=True,
+        pool_layer=None,
+    ):
         super(MultiOutputClassifier, self).__init__()
         self.backbone = backbone
         if pool_layer is None:
             self.pool_layer = nn.Sequential(
-                nn.AdaptiveAvgPool2d(output_size=(1, 1)),
-                nn.Flatten()
+                nn.AdaptiveAvgPool2d(output_size=(1, 1)), nn.Flatten()
             )
         else:
             self.pool_layer = pool_layer
@@ -41,10 +47,13 @@ class MultiOutputClassifier(nn.Module):
 
     def get_parameters(self, base_lr=1.0) -> List[Dict]:
         """A parameter list which decides optimization hyper-parameters,
-            such as the relative learning rate of each layer
+        such as the relative learning rate of each layer
         """
         params = [
-            {"params": self.backbone.parameters(), "lr": 0.1 * base_lr if self.finetune else 1.0 * base_lr},
+            {
+                "params": self.backbone.parameters(),
+                "lr": 0.1 * base_lr if self.finetune else 1.0 * base_lr,
+            },
             {"params": self.bottleneck.parameters(), "lr": 1.0 * base_lr},
             {"params": self.heads.parameters(), "lr": 1.0 * base_lr},
         ]

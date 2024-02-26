@@ -1,3 +1,8 @@
+# This code is from
+# Multi-Task Learning as Multi-Objective Optimization
+# Ozan Sener, Vladlen Koltun
+# Neural Information Processing Systems (NeurIPS) 2018
+# https://github.com/intel-isl/MultiObjectiveOptimization
 from typing import Union
 
 import numpy as np

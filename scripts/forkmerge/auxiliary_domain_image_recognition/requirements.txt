@@ -1,6 +1,0 @@
-numpy
-torch
-torchvision
-prettytable
-timm==0.5.4
-typing

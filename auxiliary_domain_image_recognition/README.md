@@ -1,15 +1,5 @@
 # Auxiliary Domain Image Recognition
 
-## Installation
-
-It’s suggested to use **pytorch==1.10.1** and **torchvision==0.11.2** in order to reproduce our results.
-
-After installing torch, simply run
-
-```
-pip install -r requirements.txt
-```
-
 ## Dataset
 
 Following datasets can be downloaded automatically:

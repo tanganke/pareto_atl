@@ -88,6 +88,8 @@ class ParetoATL_Merging(pareto_atl_base.ParetoATL):
         wandb.init(
             project="pareto_atl",
             name=args.run_name,
+            group=f"domainnet-{args.arch}",
+            job_type="pareto_merge",
             config={
                 "learning_rate": args.lr,
                 "architecture": args.arch,
@@ -167,7 +169,6 @@ class ParetoATL_Merging(pareto_atl_base.ParetoATL):
             f"round={args.round_idx}_step=0_merged.pth",
             meta_info={
                 "layer_wise_weights": layer_wise_weights.detach().cpu(),
-                "beta": sol.detach().cpu(),
             },
         )
         for step_idx in tqdm(range(args.iters_per_epoch), "Pareto optimization"):
@@ -185,7 +186,7 @@ class ParetoATL_Merging(pareto_atl_base.ParetoATL):
                     merged_model,
                     task_weights=new_task_weights,
                     train_loaders=self.train_loaders,
-                    average_steps=5,
+                    average_steps=1,
                     device=device,
                 )
                 grads = outputs["grads"]

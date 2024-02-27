@@ -13,7 +13,8 @@ function pareto_atl_train {
     iters_per_epoch=2500
     python pareto_atl_train.py data/domainnet -s c i p q r s  \
     --seed 0 --workers 8 \
-    -t ${target_task} --task_name ${task_name} -a ${architecture} \
+    -t ${target_task} -a ${architecture} \
+    --round_idx ${round_idx} --task_name ${task_name} \
     -i ${iters_per_epoch} --lr 0.01 \
     --log_dir logs/domainnet/${architecture}/${target_task} \
     --run_name pareto_atl_train-${target_task}-${round_idx}-${task_name}
@@ -28,11 +29,11 @@ function pareto_atl_train {
 function pareto_atl_merge {
     round_idx=$1
 
-    iters_per_epoch=20
-    save_interval=5
+    iters_per_epoch=200
+    save_interval=50
     python pareto_atl_merge.py data/domainnet -s c i p q r s  \
     --seed 0 --workers 8 \
-    -t ${target_task}  -a ${architecture} \
+    -t ${target_task}  -a ${architecture} --round_idx ${round_idx} \
     -i ${iters_per_epoch} --save_interval ${save_interval} --lr 1e-3 \
     --log_dir logs/domainnet/${architecture}/${target_task} \
     --run_name pareto_atl_merge-${target_task}-${round_idx}
@@ -62,7 +63,7 @@ function pareto_atl {
         # merge the models
         pareto_atl_merge ${round_idx}
         # test the merged model
-        for step_idx in $(seq 0 5 20)
+        for step_idx in $(seq 0 50 200)
         do
         step_idx=0 pareto_atl_test logs/domainnet/${architecture}/${target_task}/checkpoints/round=${round_idx}_step=${step_idx}_merged.pth
         done
@@ -70,3 +71,17 @@ function pareto_atl {
         wait
     done
 }
+
+architecture=resnet101
+
+for target_task in c i p q r s
+do
+    pareto_atl
+done
+
+architecture=vit_base_patch16_224
+
+for target_task in c i p q r s
+do
+    pareto_atl
+done

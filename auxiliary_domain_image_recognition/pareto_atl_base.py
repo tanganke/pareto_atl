@@ -1,3 +1,16 @@
+"""
+Base script of pareto ATL. 
+In this script, we define the base class of pareto ATL, which contains the following methods:
+    1. `load_data`: load the dataset.
+    2. `load_model`: load the model.
+    3. `get_checkpoint_path`, `save_checkpoint` and `load_checkpoint`
+
+This script is not runnable. It is used as a base class for the following scripts:
+    1. `pareto_atl_train.py`: train the model.
+    2. `pareto_atl_merge.py`: paretoly merge the model.
+    3. `pareto_atl_test.py`: test the model on the target domain.
+"""
+
 import abc
 import argparse
 import os

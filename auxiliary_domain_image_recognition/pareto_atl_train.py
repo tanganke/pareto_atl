@@ -199,6 +199,13 @@ class ParetoATL_Training(pareto_atl_base.ParetoATL):
 
     def run(self):
         args = self.args
+        if os.path.exists(
+            self.get_checkpoint_path(
+                f"round={args.round_idx}_task={args.task_name}.pth"
+            )
+        ):
+            logger.info(f"task {args.task_name} already trained")
+            return
         self.load_data()
         self.load_model()
 
@@ -212,13 +219,14 @@ class ParetoATL_Training(pareto_atl_base.ParetoATL):
         self.cleanup()
 
     def load_model(self):
+        args = self.args
         super().load_model()
 
-        if self.round_idx == 0:
+        if args.round_idx == 0:
             pretrained_sd = self.model.state_dict()
         else:
             pretrained_sd = self.load_checkpoint(
-                f"round={self.round_idx-1}_merged.pth"
+                f"round={args.round_idx-1}_merged.pth"
             )["state_dict"]
 
         self.pretrained_sd = pretrained_sd
@@ -238,6 +246,7 @@ class ParetoATL_Training(pareto_atl_base.ParetoATL):
         # 1. local training
         # copy models K+1 times and train them independently
         aux_task_name = args.task_name
+
         # if target task, minimize the loss on the target distribution
         # else if auxiliary task, minimize the loss on the joint distribution
         new_task_weights = deepcopy(task_weights)
@@ -246,7 +255,7 @@ class ParetoATL_Training(pareto_atl_base.ParetoATL):
 
         logger.info("local training:", new_task_weights)
         trainer = Trainer(
-            f"target={args.target[0]}_round={self.round_idx}_task={aux_task_name}",
+            f"target={args.target[0]}_round={args.round_idx}_task={aux_task_name}",
             model,
             self.get_checkpoint_path(aux_task_name),
             args.optimizer,
@@ -263,14 +272,14 @@ class ParetoATL_Training(pareto_atl_base.ParetoATL):
             dataset_sampler,
             model,
             trainer.optimizer,
-            epoch=self.round_idx,
+            epoch=args.round_idx,
             iters_per_epoch=args.iters_per_epoch,
             args=args,
             device=device,
         )
         self.save_checkpoint(
             model,
-            f"round={self.round_idx}_task={aux_task_name}.pth",
+            f"round={args.round_idx}_task={aux_task_name}.pth",
             meta_info={"task_weights": new_task_weights},
         )
 

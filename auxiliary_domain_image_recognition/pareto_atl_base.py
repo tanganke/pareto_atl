@@ -219,7 +219,7 @@ class ParetoATL:
 
     def load_checkpoint(self, filename: str):
         logger.info(f"Loading model from {self.get_checkpoint_path(filename)}")
-        checkpoint = torch.load(filename, map_location="cpu")
+        checkpoint = torch.load(self.get_checkpoint_path(filename), map_location="cpu")
         return checkpoint
 
     def load_data(self):

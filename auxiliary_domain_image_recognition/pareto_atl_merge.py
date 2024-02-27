@@ -127,7 +127,7 @@ class ParetoATL_Merging(pareto_atl_base.ParetoATL):
             )["state_dict"]
 
         task_vectors = {}
-        for task_name in zip(args.source):
+        for task_name in args.source:
             finetuned_sd = self.load_checkpoint(
                 f"round={args.round_idx}_task={task_name}.pth"
             )["state_dict"]

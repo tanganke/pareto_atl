@@ -15,7 +15,7 @@ function pareto_atl_train {
     --seed 0 --workers 8 \
     -t ${target_task} --task_name ${task_name} -a ${architecture} \
     -i ${iters_per_epoch} --lr 0.01 \
-    --log_dir logs/domainnet/pareto_atl/${target_task} \
+    --log_dir logs/domainnet/${architecture}/${target_task} \
     --run_name pareto_atl_train-${target_task}-${round_idx}-${task_name}
 }
 
@@ -34,7 +34,7 @@ function pareto_atl_merge {
     --seed 0 --workers 8 \
     -t ${target_task}  -a ${architecture} \
     -i ${iters_per_epoch} --save_interval ${save_interval} --lr 1e-3 \
-    --log_dir logs/domainnet/pareto_atl/${target_task} \
+    --log_dir logs/domainnet/${architecture}/${target_task} \
     --run_name pareto_atl_merge-${target_task}-${round_idx}
 }
 
@@ -64,9 +64,9 @@ function pareto_atl {
         # test the merged model
         for step_idx in $(seq 0 5 20)
         do
-            pareto_atl_test logs/domainnet/pareto_atl/${target_task}/checkpoints/round=${round_idx}_step=${step_idx}_merged.pth &
+            pareto_atl_test logs/domainnet/${architecture}/${target_task}/checkpoints/round=${round_idx}_step=${step_idx}_merged.pth &
         done
-        pareto_atl_test logs/domainnet/pareto_atl/${target_task}/checkpoints/round=${round_idx}_merged.pth &
+        pareto_atl_test logs/domainnet/${architecture}/${target_task}/checkpoints/round=${round_idx}_merged.pth &
         wait
     done
 }

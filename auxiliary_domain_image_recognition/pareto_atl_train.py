@@ -179,6 +179,13 @@ def parse_args():
 class ParetoATL_Training(pareto_atl_base.ParetoATL):
     def __init__(self, args):
         super().__init__(args)
+        if os.path.exists(
+            self.get_checkpoint_path(
+                f"round={args.round_idx}_task={args.task_name}.pth"
+            )
+        ):
+            logger.info(f"task {args.task_name} already trained")
+            exit(0)
 
         wandb.init(
             project="pareto_atl",
@@ -201,13 +208,7 @@ class ParetoATL_Training(pareto_atl_base.ParetoATL):
 
     def run(self):
         args = self.args
-        if os.path.exists(
-            self.get_checkpoint_path(
-                f"round={args.round_idx}_task={args.task_name}.pth"
-            )
-        ):
-            logger.info(f"task {args.task_name} already trained")
-            return
+
         self.load_data()
         self.load_model()
 

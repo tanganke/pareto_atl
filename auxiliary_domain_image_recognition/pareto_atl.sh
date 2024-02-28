@@ -52,7 +52,7 @@ function pareto_atl_test {
 }
 
 function pareto_atl {
-    for round_idx in {0..19}
+    for round_idx in {0..9}
     do 
         # train K+1 models for each task
         CUDA_VISIBLE_DEVICES=0 pareto_atl_train ${round_idx} c &
@@ -63,13 +63,13 @@ function pareto_atl {
         CUDA_VISIBLE_DEVICES=5 pareto_atl_train ${round_idx} s &
         wait
         # merge the models
-        pareto_atl_merge ${round_idx}
+        CUDA_VISIBLE_DEVICES=6 pareto_atl_merge ${round_idx}
         # test the merged model
         for step_idx in $(seq 0 50 200)
         do
-        step_idx=0 pareto_atl_test logs/domainnet/${architecture}/${target_task}/checkpoints/round=${round_idx}_step=${step_idx}_merged.pth
+        CUDA_VISIBLE_DEVICES=7 step_idx=0 pareto_atl_test logs/domainnet/${architecture}/${target_task}/checkpoints/round=${round_idx}_step=${step_idx}_merged.pth
         done
-        pareto_atl_test logs/domainnet/${architecture}/${target_task}/checkpoints/round=${round_idx}_merged.pth
+        CUDA_VISIBLE_DEVICES=7 pareto_atl_test logs/domainnet/${architecture}/${target_task}/checkpoints/round=${round_idx}_merged.pth
         wait
     done
 }

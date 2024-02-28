@@ -4,6 +4,7 @@ import torch.nn as nn
 
 from .metrics import AbsMetric
 from .loss import AbsLoss
+from torch import Tensor
 
 
 def set_random_seed(seed):
@@ -21,7 +22,7 @@ def set_random_seed(seed):
 
 
 def set_device(gpu_id):
-    r"""Set the device where model and data will be allocated. 
+    r"""Set the device where model and data will be allocated.
 
     Args:
         gpu_id (str, default='0'): The id of gpu.
@@ -30,11 +31,11 @@ def set_device(gpu_id):
 
 
 def count_parameters(model):
-    r'''Calculate the number of parameters for a model.
+    r"""Calculate the number of parameters for a model.
 
     Args:
         model (torch.nn.Module): A neural network module.
-    '''
+    """
     trainable_params = 0
     non_trainable_params = 0
     for p in model.parameters():
@@ -42,17 +43,17 @@ def count_parameters(model):
             trainable_params += p.numel()
         else:
             non_trainable_params += p.numel()
-    print('=' * 40)
-    print('Total Params:', trainable_params + non_trainable_params)
-    print('Trainable Params:', trainable_params)
-    print('Non-trainable Params:', non_trainable_params)
+    print("=" * 40)
+    print("Total Params:", trainable_params + non_trainable_params)
+    print("Trainable Params:", trainable_params)
+    print("Non-trainable Params:", non_trainable_params)
 
 
 def count_improvement(base_result, new_result, weight):
     r"""Calculate the improvement between two results as
 
     .. math::
-        \Delta_{\mathrm{p}}=100\%\times \frac{1}{T}\sum_{t=1}^T 
+        \Delta_{\mathrm{p}}=100\%\times \frac{1}{T}\sum_{t=1}^T
         \frac{1}{M_t}\sum_{m=1}^{M_t}\frac{(-1)^{w_{t,m}}(B_{t,m}-N_{t,m})}{N_{t,m}}.
 
     Args:
@@ -74,9 +75,11 @@ def count_improvement(base_result, new_result, weight):
     improvement = 0
     count = 0
     for task in list(base_result.keys()):
-        improvement += (((-1) ** np.array(weight[task])) * \
-                        (np.array(base_result[task]) - np.array(new_result[task])) / \
-                        np.array(base_result[task])).mean()
+        improvement += (
+            ((-1) ** np.array(weight[task]))
+            * (np.array(base_result[task]) - np.array(new_result[task]))
+            / np.array(base_result[task])
+        ).mean()
         count += 1
     return improvement / count
 
@@ -87,15 +90,19 @@ class SegMetric(AbsMetric):
         super(SegMetric, self).__init__()
 
         self.num_classes = num_classes
-        self.record = torch.zeros((self.num_classes, self.num_classes), dtype=torch.int64)
+        self.record = torch.zeros(
+            (self.num_classes, self.num_classes), dtype=torch.int64
+        )
 
-    def update_fun(self, pred, gt):
+    def update_fun(self, pred: Tensor, gt: Tensor):
         self.record = self.record.to(pred.device)
         pred = pred.softmax(1).argmax(1).flatten()
         gt = gt.long().flatten()
         k = (gt >= 0) & (gt < self.num_classes)
         inds = self.num_classes * gt[k].to(torch.int64) + pred[k]
-        self.record += torch.bincount(inds, minlength=self.num_classes ** 2).reshape(self.num_classes, self.num_classes)
+        self.record += torch.bincount(inds, minlength=self.num_classes**2).reshape(
+            self.num_classes, self.num_classes
+        )
 
     def score_fun(self):
         h = self.record.float()
@@ -104,7 +111,9 @@ class SegMetric(AbsMetric):
         return [torch.mean(iu).item(), acc.item()]
 
     def reinit(self):
-        self.record = torch.zeros((self.num_classes, self.num_classes), dtype=torch.int64)
+        self.record = torch.zeros(
+            (self.num_classes, self.num_classes), dtype=torch.int64
+        )
 
 
 class NoiseMetric(AbsMetric):
@@ -129,15 +138,19 @@ class DepthMetric(AbsMetric):
         self.abs_record = []
         self.rel_record = []
 
-    def update_fun(self, pred, gt):
+    def update_fun(self, pred: Tensor, gt: Tensor):
         device = pred.device
         binary_mask = (torch.sum(gt, dim=1) != 0).unsqueeze(1).to(device)
         pred = pred.masked_select(binary_mask)
         gt = gt.masked_select(binary_mask)
         abs_err = torch.abs(pred - gt)
         rel_err = torch.abs(pred - gt) / gt
-        abs_err = (torch.sum(abs_err) / torch.nonzero(binary_mask, as_tuple=False).size(0)).item()
-        rel_err = (torch.sum(rel_err) / torch.nonzero(binary_mask, as_tuple=False).size(0)).item()
+        abs_err = (
+            torch.sum(abs_err) / torch.nonzero(binary_mask, as_tuple=False).size(0)
+        ).item()
+        rel_err = (
+            torch.sum(rel_err) / torch.nonzero(binary_mask, as_tuple=False).size(0)
+        ).item()
         self.abs_record.append(abs_err)
         self.rel_record.append(rel_err)
         self.bs.append(pred.size()[0])
@@ -161,17 +174,27 @@ class NormalMetric(AbsMetric):
     def update_fun(self, pred, gt):
         # gt has been normalized on the NYUv2 dataset
         pred = pred / torch.norm(pred, p=2, dim=1, keepdim=True)
-        binary_mask = (torch.sum(gt, dim=1) != 0)
-        error = torch.acos(
-            torch.clamp(torch.sum(pred * gt, 1).masked_select(binary_mask), -1, 1)).detach().cpu().numpy()
+        binary_mask = torch.sum(gt, dim=1) != 0
+        error = (
+            torch.acos(
+                torch.clamp(torch.sum(pred * gt, 1).masked_select(binary_mask), -1, 1)
+            )
+            .detach()
+            .cpu()
+            .numpy()
+        )
         error = np.degrees(error)
         self.record.append(error)
 
     def score_fun(self):
         records = np.concatenate(self.record)
-        return [np.mean(records), np.median(records), \
-                np.mean((records < 11.25) * 1.0), np.mean((records < 22.5) * 1.0), \
-                np.mean((records < 30) * 1.0)]
+        return [
+            np.mean(records),
+            np.median(records),
+            np.mean((records < 11.25) * 1.0),
+            np.mean((records < 22.5) * 1.0),
+            np.mean((records < 30) * 1.0),
+        ]
 
 
 class SegLoss(AbsLoss):
@@ -189,7 +212,9 @@ class DepthLoss(AbsLoss):
 
     def compute_loss(self, pred, gt):
         binary_mask = (torch.sum(gt, dim=1) != 0).float().unsqueeze(1).to(pred.device)
-        loss = torch.sum(torch.abs(pred - gt) * binary_mask) / torch.nonzero(binary_mask, as_tuple=False).size(0)
+        loss = torch.sum(torch.abs(pred - gt) * binary_mask) / torch.nonzero(
+            binary_mask, as_tuple=False
+        ).size(0)
         return loss
 
 
@@ -201,7 +226,9 @@ class NormalLoss(AbsLoss):
         # gt has been normalized on the NYUv2 dataset
         pred = pred / torch.norm(pred, p=2, dim=1, keepdim=True)
         binary_mask = (torch.sum(gt, dim=1) != 0).float().unsqueeze(1).to(pred.device)
-        loss = 1 - torch.sum((pred * gt) * binary_mask) / torch.nonzero(binary_mask, as_tuple=False).size(0)
+        loss = 1 - torch.sum((pred * gt) * binary_mask) / torch.nonzero(
+            binary_mask, as_tuple=False
+        ).size(0)
         return loss
 
 
@@ -212,5 +239,7 @@ class NoiseLoss(AbsLoss):
 
     def compute_loss(self, pred, gt):
         binary_mask = (torch.sum(gt, dim=1) != 0).float().unsqueeze(1).to(pred.device)
-        loss = torch.sum(torch.abs(pred - gt) * binary_mask) / torch.nonzero(binary_mask, as_tuple=False).size(0)
+        loss = torch.sum(torch.abs(pred - gt) * binary_mask) / torch.nonzero(
+            binary_mask, as_tuple=False
+        ).size(0)
         return loss

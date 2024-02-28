@@ -145,7 +145,7 @@ class Trainer:
             }
             pbar.set_postfix(log_info)
             wandb.log(
-                {f"train_{k}": v for k, v in log_info.items()},
+                {f"{args.task_name}_train_{k}": v for k, v in log_info.items()},
             )
 
     def test(self, val_loaders):
@@ -183,7 +183,7 @@ class ParetoATL_Training(pareto_atl_base.ParetoATL):
         wandb.init(
             project="pareto_atl",
             name=args.run_name,
-            group=f"domainnet-{args.arch}",
+            group=f"domainnet-{args.arch}-{args.target[0]}",
             job_type="train",
             config={
                 "learning_rate": args.lr,

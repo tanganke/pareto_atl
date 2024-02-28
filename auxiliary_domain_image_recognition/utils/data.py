@@ -7,8 +7,8 @@ from torch.utils.data import Sampler
 from torch.utils.data import DataLoader, Dataset
 from typing import TypeVar, Iterable, Dict, List
 
-T_co = TypeVar('T_co', covariant=True)
-T = TypeVar('T')
+T_co = TypeVar("T_co", covariant=True)
+T = TypeVar("T")
 
 
 def send_to_device(tensor, device):
@@ -96,7 +96,9 @@ class RandomMultipleGallerySampler(Sampler):
     def __iter__(self):
         def select_idxes(element_list, target_element):
             assert isinstance(element_list, list)
-            return [i for i, element in enumerate(element_list) if element != target_element]
+            return [
+                i for i, element in enumerate(element_list) if element != target_element
+            ]
 
         pid_idxes = torch.randperm(len(self.pid_list)).tolist()
         final_idxes = []
@@ -114,9 +116,13 @@ class RandomMultipleGallerySampler(Sampler):
 
             if selected_cid_list:
                 if len(selected_cid_list) >= self.num_instances:
-                    cid_idxes = np.random.choice(selected_cid_list, size=self.num_instances - 1, replace=False)
+                    cid_idxes = np.random.choice(
+                        selected_cid_list, size=self.num_instances - 1, replace=False
+                    )
                 else:
-                    cid_idxes = np.random.choice(selected_cid_list, size=self.num_instances - 1, replace=True)
+                    cid_idxes = np.random.choice(
+                        selected_cid_list, size=self.num_instances - 1, replace=True
+                    )
                 for cid_idx in cid_idxes:
                     final_idxes.append(idx_list[cid_idx])
             else:
@@ -124,9 +130,13 @@ class RandomMultipleGallerySampler(Sampler):
                 if not selected_idxes:
                     continue
                 if len(selected_idxes) >= self.num_instances:
-                    pid_idxes = np.random.choice(selected_idxes, size=self.num_instances - 1, replace=False)
+                    pid_idxes = np.random.choice(
+                        selected_idxes, size=self.num_instances - 1, replace=False
+                    )
                 else:
-                    pid_idxes = np.random.choice(selected_idxes, size=self.num_instances - 1, replace=True)
+                    pid_idxes = np.random.choice(
+                        selected_idxes, size=self.num_instances - 1, replace=True
+                    )
 
                 for pid_idx in pid_idxes:
                     final_idxes.append(idx_list[pid_idx])
@@ -147,7 +157,7 @@ class CombineDataset(Dataset[T_co]):
     def __init__(self, datasets: Iterable[Dataset]) -> None:
         super(CombineDataset, self).__init__()
         # Cannot verify that datasets is Sized
-        assert len(datasets) > 0, 'datasets should not be an empty iterable'  # type: ignore
+        assert len(datasets) > 0, "datasets should not be an empty iterable"  # type: ignore
         self.datasets = list(datasets)
 
     def __len__(self):

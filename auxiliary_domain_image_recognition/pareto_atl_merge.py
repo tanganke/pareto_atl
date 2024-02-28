@@ -88,7 +88,7 @@ class ParetoATL_Merging(pareto_atl_base.ParetoATL):
         wandb.init(
             project="pareto_atl",
             name=args.run_name,
-            group=f"domainnet-{args.arch}",
+            group=f"domainnet-{args.arch}-{args.target[0]}",
             job_type="pareto_merge",
             config={
                 "learning_rate": args.lr,

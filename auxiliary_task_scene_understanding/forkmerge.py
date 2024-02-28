@@ -1,7 +1,7 @@
 import json
 import math
 from copy import deepcopy
-
+from typing import cast
 import torch.nn.functional as F
 
 import LibMTL.architecture as architecture_method
@@ -460,7 +460,7 @@ def main(params):
 
         if params.pretrained is not None:
             print("Loading from ", params.pretrained)
-            trainers[topk].model.load_state_dict(
+            cast(NYUtrainer,trainers[topk]).model.load_state_dict(
                 torch.load(params.pretrained, map_location="cpu"), strict=False
             )
 

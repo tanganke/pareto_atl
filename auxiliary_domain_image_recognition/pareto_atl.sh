@@ -1,6 +1,8 @@
 # Pareto Auxiliary-Task Learning
 # tasks: c i p q r s
 
+# wandb group name for each experiment: "domainnet-{args.arch}-{args.target[0]}"
+
 # 1. local training
 # a) load model from checkpoint `{log_dir}/checkpoints/round={round_idx-1}_merged.pth`
 #    if round_idx=0, then load the pre-trained model from torchvision.
@@ -15,7 +17,7 @@ function pareto_atl_train {
     --seed 0 --workers 8 \
     -t ${target_task} -a ${architecture} \
     --round_idx ${round_idx} --task_name ${task_name} \
-    -i ${iters_per_epoch} --lr 0.01 \
+    -i ${iters_per_epoch} --lr 1e-3 --wd 0 --optimizer adamw \
     --log_dir logs/domainnet/${architecture}/${target_task} \
     --run_name pareto_atl_train-${target_task}-${round_idx}-${task_name}
 }
@@ -34,7 +36,7 @@ function pareto_atl_merge {
     python pareto_atl_merge.py data/domainnet -s c i p q r s  \
     --seed 0 --workers 8 \
     -t ${target_task}  -a ${architecture} --round_idx ${round_idx} \
-    -i ${iters_per_epoch} --save_interval ${save_interval} --lr 1e-3 \
+    -i ${iters_per_epoch} --save_interval ${save_interval} --lr 1e-2 --wd 0\
     --log_dir logs/domainnet/${architecture}/${target_task} \
     --run_name pareto_atl_merge-${target_task}-${round_idx}
 }

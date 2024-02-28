@@ -8,7 +8,7 @@ from .utils import count_parameters
 
 
 class Trainer(nn.Module):
-    r'''A Multi-Task Learning Trainer.
+    r"""A Multi-Task Learning Trainer.
 
     This is a unified and extensible training framework for multi-task learning. 
 
@@ -73,13 +73,24 @@ class Trainer(nn.Module):
                           scheduler_param=scheduler_param,
                           **kwargs)
 
-    '''
+    """
 
-    def __init__(self, task_dict, weighting, architecture, encoder_class, decoders,
-                 rep_grad, multi_input, optim_param, scheduler_param, **kwargs):
+    def __init__(
+        self,
+        task_dict,
+        weighting,
+        architecture,
+        encoder_class,
+        decoders,
+        rep_grad,
+        multi_input,
+        optim_param,
+        scheduler_param,
+        **kwargs
+    ):
         super(Trainer, self).__init__()
 
-        self.device = torch.device('cuda:0')
+        self.device = torch.device("cuda:0")
         self.kwargs = kwargs
         self.task_dict = task_dict
         self.task_num = len(task_dict)
@@ -95,46 +106,70 @@ class Trainer(nn.Module):
     def _prepare_model(self, weighting, architecture, encoder_class, decoders):
 
         class MTLmodel(architecture, weighting):
-            def __init__(self, task_name, encoder_class, decoders, rep_grad, multi_input, device, kwargs):
-                super(MTLmodel, self).__init__(task_name, encoder_class, decoders, rep_grad, multi_input, device,
-                                               **kwargs)
+            def __init__(
+                self,
+                task_name,
+                encoder_class,
+                decoders,
+                rep_grad,
+                multi_input,
+                device,
+                kwargs,
+            ):
+                super(MTLmodel, self).__init__(
+                    task_name,
+                    encoder_class,
+                    decoders,
+                    rep_grad,
+                    multi_input,
+                    device,
+                    **kwargs
+                )
                 self.init_param()
 
-        self.model = MTLmodel(task_name=self.task_name,
-                              encoder_class=encoder_class,
-                              decoders=decoders,
-                              rep_grad=self.rep_grad,
-                              multi_input=self.multi_input,
-                              device=self.device,
-                              kwargs=self.kwargs['arch_args']).to(self.device)
+        self.model :nn.Module = MTLmodel(
+            task_name=self.task_name,
+            encoder_class=encoder_class,
+            decoders=decoders,
+            rep_grad=self.rep_grad,
+            multi_input=self.multi_input,
+            device=self.device,
+            kwargs=self.kwargs["arch_args"],
+        ).to(self.device)
         count_parameters(self.model)
 
     def _prepare_optimizer(self, optim_param, scheduler_param):
         optim_dict = {
-            'sgd': torch.optim.SGD,
-            'adam': torch.optim.Adam,
-            'adagrad': torch.optim.Adagrad,
-            'rmsprop': torch.optim.RMSprop,
+            "sgd": torch.optim.SGD,
+            "adam": torch.optim.Adam,
+            "adagrad": torch.optim.Adagrad,
+            "rmsprop": torch.optim.RMSprop,
         }
         scheduler_dict = {
-            'exp': torch.optim.lr_scheduler.ExponentialLR,
-            'step': torch.optim.lr_scheduler.StepLR,
-            'cos': torch.optim.lr_scheduler.CosineAnnealingLR,
+            "exp": torch.optim.lr_scheduler.ExponentialLR,
+            "step": torch.optim.lr_scheduler.StepLR,
+            "cos": torch.optim.lr_scheduler.CosineAnnealingLR,
         }
-        optim_arg = {k: v for k, v in optim_param.items() if k != 'optim'}
-        self.optimizer = optim_dict[optim_param['optim']](self.model.parameters(), **optim_arg)
+        optim_arg = {k: v for k, v in optim_param.items() if k != "optim"}
+        self.optimizer = optim_dict[optim_param["optim"]](
+            self.model.parameters(), **optim_arg
+        )
         if scheduler_param is not None:
-            scheduler_arg = {k: v for k, v in scheduler_param.items() if k != 'scheduler'}
-            self.scheduler = scheduler_dict[scheduler_param['scheduler']](self.optimizer, **scheduler_arg)
+            scheduler_arg = {
+                k: v for k, v in scheduler_param.items() if k != "scheduler"
+            }
+            self.scheduler = scheduler_dict[scheduler_param["scheduler"]](
+                self.optimizer, **scheduler_arg
+            )
         else:
             self.scheduler = None
 
     def _process_data(self, loader):
         try:
-            data, label = loader[1].next()
+            data, label = next(loader[1])
         except:
             loader[1] = iter(loader[0])
-            data, label = loader[1].next()
+            data, label = next(loader[1])
         data = data.to(self.device, non_blocking=True)
         if not self.multi_input:
             for task in self.task_name:
@@ -144,23 +179,25 @@ class Trainer(nn.Module):
         return data, label
 
     def process_preds(self, preds, task_name=None):
-        r'''The processing of prediction for each task. 
+        r"""The processing of prediction for each task.
 
-        - The default is no processing. If necessary, you can rewrite this function. 
+        - The default is no processing. If necessary, you can rewrite this function.
         - If ``multi_input`` is ``True``, ``task_name`` is valid and ``preds`` with type :class:`torch.Tensor` is the prediction of this task.
         - otherwise, ``task_name`` is invalid and ``preds`` is a :class:`dict` of name-prediction pairs of all tasks.
 
         Args:
             preds (dict or torch.Tensor): The prediction of ``task_name`` or all tasks.
             task_name (str): The string of task name.
-        '''
+        """
         return preds
 
     def _compute_loss(self, preds, gts, task_name=None):
         if not self.multi_input:
             train_losses = torch.zeros(self.task_num).to(self.device)
             for tn, task in enumerate(self.task_name):
-                train_losses[tn] = self.meter.losses[task]._update_loss(preds[task], gts[task])
+                train_losses[tn] = self.meter.losses[task]._update_loss(
+                    preds[task], gts[task]
+                )
         else:
             train_losses = self.meter.losses[task_name]._update_loss(preds, gts)
         return train_losses
@@ -177,9 +214,15 @@ class Trainer(nn.Module):
                 batch_num.append(len(dataloaders[task]))
             return loader, batch_num
 
-    def train(self, train_dataloaders, test_dataloaders, epochs,
-              val_dataloaders=None, return_weight=False):
-        r'''The training process of multi-task learning.
+    def train(
+        self,
+        train_dataloaders,
+        test_dataloaders,
+        epochs,
+        val_dataloaders=None,
+        return_weight=False,
+    ):
+        r"""The training process of multi-task learning.
 
         Args:
             train_dataloaders (dict or torch.utils.data.DataLoader): The dataloaders used for training. \
@@ -191,7 +234,7 @@ class Trainer(nn.Module):
                             The same structure with ``train_dataloaders``.
             epochs (int): The total training epochs.
             return_weight (bool): if ``True``, the loss weights will be returned.
-        '''
+        """
         train_loader, train_batch = self._prepare_dataloaders(train_dataloaders)
         train_batch = max(train_batch) if self.multi_input else train_batch
 
@@ -201,7 +244,7 @@ class Trainer(nn.Module):
         for epoch in range(epochs):
             self.model.epoch = epoch
             self.model.train()
-            self.meter.record_time('begin')
+            self.meter.record_time("begin")
             for batch_index in range(train_batch):
                 if not self.multi_input:
                     train_inputs, train_gts = self._process_data(train_loader)
@@ -216,44 +259,46 @@ class Trainer(nn.Module):
                         train_pred = self.model(train_input, task)
                         train_pred = train_pred[task]
                         train_pred = self.process_preds(train_pred, task)
-                        train_losses[tn] = self._compute_loss(train_pred, train_gt, task)
+                        train_losses[tn] = self._compute_loss(
+                            train_pred, train_gt, task
+                        )
                         self.meter.update(train_pred, train_gt, task)
 
                 self.optimizer.zero_grad()
-                w = self.model.backward(train_losses, **self.kwargs['weight_args'])
+                w = self.model.backward(train_losses, **self.kwargs["weight_args"])
                 if w is not None:
                     self.batch_weight[:, epoch, batch_index] = w
                 self.optimizer.step()
 
-            self.meter.record_time('end')
+            self.meter.record_time("end")
             self.meter.get_score()
             self.model.train_loss_buffer[:, epoch] = self.meter.loss_item
-            self.meter.display(epoch=epoch, mode='train')
+            self.meter.display(epoch=epoch, mode="train")
             self.meter.reinit()
 
             if val_dataloaders is not None:
                 self.meter.has_val = True
-                self.test(val_dataloaders, epoch, mode='val')
-            self.test(test_dataloaders, epoch, mode='test')
+                self.test(val_dataloaders, epoch, mode="val")
+            self.test(test_dataloaders, epoch, mode="test")
             if self.scheduler is not None:
                 self.scheduler.step()
         self.meter.display_best_result()
         if return_weight:
             return self.batch_weight
 
-    def test(self, test_dataloaders, epoch=None, mode='test'):
-        r'''The test process of multi-task learning.
+    def test(self, test_dataloaders, epoch=None, mode="test"):
+        r"""The test process of multi-task learning.
 
         Args:
             test_dataloaders (dict or torch.utils.data.DataLoader): If ``multi_input`` is ``True``, \
                             it is a dictionary of name-dataloader pairs. Otherwise, it is a single \
                             dataloader which returns data and a dictionary of name-label pairs in each iteration.
             epoch (int, default=None): The current epoch. 
-        '''
+        """
         test_loader, test_batch = self._prepare_dataloaders(test_dataloaders)
 
         self.model.eval()
-        self.meter.record_time('begin')
+        self.meter.record_time("begin")
         with torch.no_grad():
             if not self.multi_input:
                 for batch_index in range(test_batch):
@@ -271,7 +316,7 @@ class Trainer(nn.Module):
                         test_pred = self.process_preds(test_pred)
                         test_loss = self._compute_loss(test_pred, test_gt, task)
                         self.meter.update(test_pred, test_gt, task)
-        self.meter.record_time('end')
+        self.meter.record_time("end")
         self.meter.get_score()
         self.meter.display(epoch=epoch, mode=mode)
         self.meter.reinit()

@@ -9,6 +9,7 @@ import torchvision.transforms as T
 from torch.optim import SGD, AdamW
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from .classifier import MultiOutputClassifier
 
 from . import datasets, models
 from .data import ForeverDataIterator
@@ -66,7 +67,11 @@ def get_model(model_name, pretrain=True):
 
 
 def get_optimizer(
-    model, optimizer_name: str, lr: float, momentum=0.9, weight_decay=5e-4
+    model: MultiOutputClassifier,
+    optimizer_name: str,
+    lr: float,
+    momentum=0.9,
+    weight_decay=5e-4,
 ):
     if optimizer_name == "sgd":
         optimizer = SGD(

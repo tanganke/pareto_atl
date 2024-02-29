@@ -21,22 +21,28 @@ class GradNorm(AbsWeighting):
         super(GradNorm, self).__init__()
 
     def init_param(self):
-        self.loss_scale = nn.Parameter(torch.tensor([1.0] * self.task_num, device=self.device))
+        self.loss_scale = nn.Parameter(
+            torch.tensor([1.0] * self.task_num, device=self.device)
+        )
 
     def backward(self, losses, **kwargs):
-        alpha = kwargs['alpha']
+        alpha = kwargs["alpha"]
         if self.epoch >= 1:
             loss_scale = self.task_num * F.softmax(self.loss_scale, dim=-1)
-            grads = self._get_grads(losses, mode='backward')
+            grads = self._get_grads(losses, mode="backward")
             if self.rep_grad:
                 per_grads, grads = grads[0], grads[1]
 
             G_per_loss = torch.norm(loss_scale.unsqueeze(1) * grads, p=2, dim=-1)
             G = G_per_loss.mean(0)
-            L_i = torch.Tensor([losses[tn].item() / self.train_loss_buffer[tn, 0] for tn in range(self.task_num)]).to(
-                self.device)
+            L_i = torch.Tensor(
+                [
+                    losses[tn].item() / self.train_loss_buffer[tn, 0]
+                    for tn in range(self.task_num)
+                ]
+            ).to(self.device)
             r_i = L_i / L_i.mean()
-            constant_term = (G * (r_i ** alpha)).detach()
+            constant_term = (G * (r_i**alpha)).detach()
             L_grad = (G_per_loss - constant_term).abs().sum(0)
             L_grad.backward()
             loss_weight = loss_scale.detach().clone()

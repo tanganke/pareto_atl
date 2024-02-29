@@ -23,10 +23,12 @@ class PCGrad(AbsWeighting):
     def backward(self, losses, **kwargs):
         batch_weight = np.ones(len(losses))
         if self.rep_grad:
-            raise ValueError('No support method PCGrad with representation gradients (rep_grad=True)')
+            raise ValueError(
+                "No support method PCGrad with representation gradients (rep_grad=True)"
+            )
         else:
             self._compute_grad_dim()
-            grads = self._compute_grad(losses, mode='backward')  # [task_num, grad_dim]
+            grads = self._compute_grad(losses, mode="backward")  # [task_num, grad_dim]
         pc_grads = grads.clone()
         for tn_i in range(self.task_num):
             task_index = list(range(self.task_num))

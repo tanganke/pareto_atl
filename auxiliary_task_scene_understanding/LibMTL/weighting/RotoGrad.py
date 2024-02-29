@@ -9,8 +9,11 @@ import geotorch
 def divide(numer, denom):
     """Numerically stable division."""
     epsilon = 1e-15
-    return torch.sign(numer) * torch.sign(denom) * torch.exp(
-        torch.log(numer.abs() + epsilon) - torch.log(denom.abs() + epsilon))
+    return (
+        torch.sign(numer)
+        * torch.sign(denom)
+        * torch.exp(torch.log(numer.abs() + epsilon) - torch.log(denom.abs() + epsilon))
+    )
 
 
 class VanillaMTL(nn.Module):
@@ -100,11 +103,14 @@ class VanillaMTL(nn.Module):
 
 def rotate(points, rotation, total_size):
     if total_size != points.size(-1):
-        points_lo, points_hi = points[:, :rotation.size(1)], points[:, rotation.size(1):]
-        point_lo = torch.einsum('ij,bj->bi', rotation, points_lo)
+        points_lo, points_hi = (
+            points[:, : rotation.size(1)],
+            points[:, rotation.size(1) :],
+        )
+        point_lo = torch.einsum("ij,bj->bi", rotation, points_lo)
         return torch.cat((point_lo, points_hi), dim=-1)
     else:
-        return torch.einsum('ij,bj->bi', rotation, points)
+        return torch.einsum("ij,bj->bi", rotation, points)
 
 
 def rotate_back(points, rotation, total_size):
@@ -131,7 +137,7 @@ class RotateModule(nn.Module):
 
     @property
     def weight(self):
-        return self.p.weight[self.item] if hasattr(self.p, 'weight') else 1.
+        return self.p.weight[self.item] if hasattr(self.p, "weight") else 1.0
 
     def rotate(self, z):
         return rotate(z, self.R, self.p.latent_size)
@@ -181,8 +187,15 @@ class RotateOnly(nn.Module):
     heads: Sequence[nn.Module]
     rep: Optional[torch.Tensor]
 
-    def __init__(self, backbone: nn.Module, heads: List[nn.Module], latent_size: int, *args,
-                 burn_in_period: int = 20, normalize_losses: bool = False):
+    def __init__(
+        self,
+        backbone: nn.Module,
+        heads: List[nn.Module],
+        latent_size: int,
+        *args,
+        burn_in_period: int = 20,
+        normalize_losses: bool = False,
+    ):
         super(RotateOnly, self).__init__()
         num_tasks = len(heads)
 
@@ -194,8 +207,13 @@ class RotateOnly(nn.Module):
 
         # Parameterize rotations so we can run unconstrained optimization
         for i in range(num_tasks):
-            self.register_parameter(f'rotation_{i}', nn.Parameter(torch.eye(latent_size), requires_grad=True))
-            geotorch.orthogonal(self, f'rotation_{i}', triv='expm')  # uses exponential map (alternative: cayley)
+            self.register_parameter(
+                f"rotation_{i}",
+                nn.Parameter(torch.eye(latent_size), requires_grad=True),
+            )
+            geotorch.orthogonal(
+                self, f"rotation_{i}", triv="expm"
+            )  # uses exponential map (alternative: cayley)
 
         # Parameters
         self.num_tasks = num_tasks
@@ -214,7 +232,7 @@ class RotateOnly(nn.Module):
     @property
     def rotation(self) -> Sequence[torch.Tensor]:
         r"""List of rotations matrices, one per task. These are trainable, make sure to call `detach()`."""
-        return [getattr(self, f'rotation_{i}') for i in range(self.num_tasks)]
+        return [getattr(self, f"rotation_{i}") for i in range(self.num_tasks)]
 
     @property
     def backbone(self) -> nn.Module:
@@ -290,7 +308,9 @@ class RotateOnly(nn.Module):
         else:
             return preds, extra_out
 
-    def backward(self, losses: Sequence[torch.Tensor], backbone_loss=None, **kwargs) -> None:
+    def backward(
+        self, losses: Sequence[torch.Tensor], backbone_loss=None, **kwargs
+    ) -> None:
         r"""Computes the backward computations for the entire model (that is, shared and specific modules).
         It also computes the gradients for the rotation matrices.
         Parameters
@@ -300,7 +320,7 @@ class RotateOnly(nn.Module):
         backbone_loss
             Loss exclusive for the backbone (for example, a regularization term).
         """
-        assert self.training, 'Backward should only be called when training'
+        assert self.training, "Backward should only be called when training"
 
         if self.iteration_counter == 0 or self.iteration_counter == self.burn_in_period:
             for i, loss in enumerate(losses):
@@ -329,7 +349,9 @@ class RotateOnly(nn.Module):
         self.rep.backward(self._rep_grad())
 
     def _rep_grad(self):
-        old_grads = self.original_grads  # these grads are already rotated, we have to recover the originals
+        old_grads = (
+            self.original_grads
+        )  # these grads are already rotated, we have to recover the originals
         # with torch.no_grad():
         #     grads = [rotate(g, R) for g, R in zip(grads, self.rotation)]
         #
@@ -344,7 +366,7 @@ class RotateOnly(nn.Module):
         for i, grad in enumerate(grads):
             R = self.rotation[i]
             loss_rotograd = rotate(mean_grad, R, self.latent_size) - grad
-            loss_rotograd = torch.einsum('bi,bi->b', loss_rotograd, loss_rotograd)
+            loss_rotograd = torch.einsum("bi,bi->b", loss_rotograd, loss_rotograd)
             loss_rotograd.mean().backward()
 
         return sum(old_grads)
@@ -399,9 +421,23 @@ class RotoGrad(RotateOnly):
     heads: Sequence[nn.Module]
     rep: torch.Tensor
 
-    def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module], latent_size: int, *args,
-                 burn_in_period: int = 20, normalize_losses: bool = False):
-        super().__init__(backbone, heads, latent_size, burn_in_period, *args, normalize_losses=normalize_losses)
+    def __init__(
+        self,
+        backbone: nn.Module,
+        heads: Sequence[nn.Module],
+        latent_size: int,
+        *args,
+        burn_in_period: int = 20,
+        normalize_losses: bool = False,
+    ):
+        super().__init__(
+            backbone,
+            heads,
+            latent_size,
+            burn_in_period,
+            *args,
+            normalize_losses=normalize_losses,
+        )
 
         self.initial_grads = None
         self.counter = 0
@@ -409,7 +445,9 @@ class RotoGrad(RotateOnly):
     def _rep_grad(self):
         super()._rep_grad()
 
-        grad_norms = [torch.norm(g, keepdim=True).clamp_min(1e-15) for g in self.original_grads]
+        grad_norms = [
+            torch.norm(g, keepdim=True).clamp_min(1e-15) for g in self.original_grads
+        ]
 
         if self.initial_grads is None or self.counter == self.burn_in_period:
             self.initial_grads = grad_norms
@@ -419,7 +457,9 @@ class RotoGrad(RotateOnly):
         alphas = [x / torch.clamp(sum(conv_ratios), 1e-15) for x in conv_ratios]
 
         weighted_sum_norms = sum([a * g for a, g in zip(alphas, grad_norms)])
-        grads = [g / n * weighted_sum_norms for g, n in zip(self.original_grads, grad_norms)]
+        grads = [
+            g / n * weighted_sum_norms for g, n in zip(self.original_grads, grad_norms)
+        ]
         return sum(grads)
 
 
@@ -461,12 +501,31 @@ class RotoGradNorm(RotoGrad):
         International Conference on Machine Learning. PMLR, 2018.
     """
 
-    def __init__(self, backbone: nn.Module, heads: Sequence[nn.Module], latent_size: int, *args, alpha: float,
-                 burn_in_period: int = 20, normalize_losses: bool = False):
-        super().__init__(backbone, heads, latent_size, *args, burn_in_period=burn_in_period,
-                         normalize_losses=normalize_losses)
+    def __init__(
+        self,
+        backbone: nn.Module,
+        heads: Sequence[nn.Module],
+        latent_size: int,
+        *args,
+        alpha: float,
+        burn_in_period: int = 20,
+        normalize_losses: bool = False,
+    ):
+        super().__init__(
+            backbone,
+            heads,
+            latent_size,
+            *args,
+            burn_in_period=burn_in_period,
+            normalize_losses=normalize_losses,
+        )
         self.alpha = alpha
-        self.weight_ = nn.ParameterList([nn.Parameter(torch.ones([]), requires_grad=True) for _ in range(len(heads))])
+        self.weight_ = nn.ParameterList(
+            [
+                nn.Parameter(torch.ones([]), requires_grad=True)
+                for _ in range(len(heads))
+            ]
+        )
 
     @property
     def weight(self) -> Sequence[torch.Tensor]:
@@ -480,7 +539,9 @@ class RotoGradNorm(RotoGrad):
 
         grads_norm = [g.norm(p=2) for g in self.original_grads]
 
-        mean_grad = sum([g * w for g, w in zip(self.original_grads, self.weight)]).detach().clone() / len(self.grads)
+        mean_grad = sum(
+            [g * w for g, w in zip(self.original_grads, self.weight)]
+        ).detach().clone() / len(self.grads)
         mean_grad_norm = mean_grad.norm(p=2)
         mean_loss = sum(self.losses) / len(self.losses)
 

@@ -18,17 +18,45 @@ class CGC(MMoE):
 
     """
 
-    def __init__(self, task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs):
-        super(CGC, self).__init__(task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs)
+    def __init__(
+        self,
+        task_name,
+        encoder_class,
+        decoders,
+        rep_grad,
+        multi_input,
+        device,
+        **kwargs
+    ):
+        super(CGC, self).__init__(
+            task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs
+        )
 
-        self.num_experts = {task: self.kwargs['num_experts'][tn + 1] for tn, task in enumerate(self.task_name)}
-        self.num_experts['share'] = self.kwargs['num_experts'][0]
+        self.num_experts = {
+            task: self.kwargs["num_experts"][tn + 1]
+            for tn, task in enumerate(self.task_name)
+        }
+        self.num_experts["share"] = self.kwargs["num_experts"][0]
         self.experts_specific = nn.ModuleDict(
-            {task: nn.ModuleList([encoder_class() for _ in range(self.num_experts[task])]) for task in self.task_name})
-        self.gate_specific = nn.ModuleDict({task: nn.Sequential(nn.Linear(self.input_size,
-                                                                          self.num_experts['share'] + self.num_experts[
-                                                                              task]),
-                                                                nn.Softmax(dim=-1)) for task in self.task_name})
+            {
+                task: nn.ModuleList(
+                    [encoder_class() for _ in range(self.num_experts[task])]
+                )
+                for task in self.task_name
+            }
+        )
+        self.gate_specific = nn.ModuleDict(
+            {
+                task: nn.Sequential(
+                    nn.Linear(
+                        self.input_size,
+                        self.num_experts["share"] + self.num_experts[task],
+                    ),
+                    nn.Softmax(dim=-1),
+                )
+                for task in self.task_name
+            }
+        )
 
     def forward(self, inputs, task_name=None):
         experts_shared_rep = torch.stack([e(inputs) for e in self.experts_shared])
@@ -36,11 +64,15 @@ class CGC(MMoE):
         for task in self.task_name:
             if task_name is not None and task != task_name:
                 continue
-            experts_specific_rep = torch.stack([e(inputs) for e in self.experts_specific[task]])
+            experts_specific_rep = torch.stack(
+                [e(inputs) for e in self.experts_specific[task]]
+            )
             selector = self.gate_specific[task](torch.flatten(inputs, start_dim=1))
-            gate_rep = torch.einsum('ij..., ji -> j...',
-                                    torch.cat([experts_shared_rep, experts_specific_rep], dim=0),
-                                    selector)
+            gate_rep = torch.einsum(
+                "ij..., ji -> j...",
+                torch.cat([experts_shared_rep, experts_specific_rep], dim=0),
+                selector,
+            )
             gate_rep = self._prepare_rep(gate_rep, task, same_rep=False)
             out[task] = self.decoders[task](gate_rep)
         return out

@@ -8,12 +8,14 @@ from .PLE import PLE
 from .DSelect_k import DSelect_k
 from .LTB import LTB
 
-__all__ = ['AbsArchitecture',
-           'HPS',
-           'Cross_stitch',
-           'MMoE',
-           'MTAN',
-           'CGC',
-           'PLE',
-           'DSelect_k',
-           'LTB']
+__all__ = [
+    "AbsArchitecture",
+    "HPS",
+    "Cross_stitch",
+    "MMoE",
+    "MTAN",
+    "CGC",
+    "PLE",
+    "DSelect_k",
+    "LTB",
+]

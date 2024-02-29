@@ -13,7 +13,7 @@ class TextLogger(object):
 
     def __init__(self, filename, stream=sys.stdout):
         self.terminal = stream
-        self.log = open(filename, 'a')
+        self.log = open(filename, "a")
 
     def write(self, message):
         self.terminal.write(message)
@@ -42,7 +42,7 @@ class CompleteLogger:
 
     """
 
-    def __init__(self, root, phase='train'):
+    def __init__(self, root, phase="train"):
         self.root = root
         self.phase = phase
         self.visualize_directory = os.path.join(self.root, "visualize")
@@ -61,7 +61,7 @@ class CompleteLogger:
         self.logger = TextLogger(log_filename)
         sys.stdout = self.logger
         sys.stderr = self.logger
-        if phase != 'train':
+        if phase != "train":
             self.set_epoch(phase)
 
     def set_epoch(self, epoch):
@@ -70,7 +70,7 @@ class CompleteLogger:
         self.epoch = epoch
 
     def _get_phase_or_epoch(self):
-        if self.phase == 'train':
+        if self.phase == "train":
             return str(self.epoch)
         else:
             return self.phase
@@ -79,7 +79,9 @@ class CompleteLogger:
         """
         Get the full image path for a specific filename
         """
-        return os.path.join(self.visualize_directory, self._get_phase_or_epoch(), filename)
+        return os.path.join(
+            self.visualize_directory, self._get_phase_or_epoch(), filename
+        )
 
     def get_checkpoint_path(self, name=None):
         """

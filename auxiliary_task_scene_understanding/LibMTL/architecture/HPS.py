@@ -13,6 +13,17 @@ class HPS(AbsArchitecture):
     and implemented by us. 
     """
 
-    def __init__(self, task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs):
-        super(HPS, self).__init__(task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs)
+    def __init__(
+        self,
+        task_name,
+        encoder_class,
+        decoders,
+        rep_grad,
+        multi_input,
+        device,
+        **kwargs
+    ):
+        super(HPS, self).__init__(
+            task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs
+        )
         self.encoder = self.encoder_class()

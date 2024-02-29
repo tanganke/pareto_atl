@@ -18,41 +18,75 @@ class _transform_resnet_MTAN(nn.Module):
 
         self.expansion = 4 if resnet_network.feature_dim == 2048 else 1
         ch = np.array([64, 128, 256, 512]) * self.expansion
-        self.shared_conv = nn.Sequential(resnet_network.conv1, resnet_network.bn1,
-                                         resnet_network.relu, resnet_network.maxpool)
-        self.shared_layer, self.encoder_att, self.encoder_block_att = nn.ModuleDict({}), nn.ModuleDict(
-            {}), nn.ModuleList([])
+        self.shared_conv = nn.Sequential(
+            resnet_network.conv1,
+            resnet_network.bn1,
+            resnet_network.relu,
+            resnet_network.maxpool,
+        )
+        self.shared_layer, self.encoder_att, self.encoder_block_att = (
+            nn.ModuleDict({}),
+            nn.ModuleDict({}),
+            nn.ModuleList([]),
+        )
         for i in range(4):
-            self.shared_layer[str(i)] = nn.ModuleList([eval('resnet_network.layer' + str(i + 1) + '[:-1]'),
-                                                       eval('resnet_network.layer' + str(i + 1) + '[-1]')])
+            self.shared_layer[str(i)] = nn.ModuleList(
+                [
+                    eval("resnet_network.layer" + str(i + 1) + "[:-1]"),
+                    eval("resnet_network.layer" + str(i + 1) + "[-1]"),
+                ]
+            )
             if i == 0:
-                self.encoder_att[str(i)] = nn.ModuleList([self._att_layer(ch[0],
-                                                                          ch[0] // self.expansion,
-                                                                          ch[0]).to(self.device) for _ in
-                                                          range(self.task_num)])
+                self.encoder_att[str(i)] = nn.ModuleList(
+                    [
+                        self._att_layer(ch[0], ch[0] // self.expansion, ch[0]).to(
+                            self.device
+                        )
+                        for _ in range(self.task_num)
+                    ]
+                )
             else:
-                self.encoder_att[str(i)] = nn.ModuleList([self._att_layer(2 * ch[i],
-                                                                          ch[i] // self.expansion,
-                                                                          ch[i]).to(self.device) for _ in
-                                                          range(self.task_num)])
+                self.encoder_att[str(i)] = nn.ModuleList(
+                    [
+                        self._att_layer(2 * ch[i], ch[i] // self.expansion, ch[i]).to(
+                            self.device
+                        )
+                        for _ in range(self.task_num)
+                    ]
+                )
 
             if i < 3:
-                self.encoder_block_att.append(self._conv_layer(ch[i], ch[i + 1] // self.expansion).to(self.device))
+                self.encoder_block_att.append(
+                    self._conv_layer(ch[i], ch[i + 1] // self.expansion).to(self.device)
+                )
 
         self.down_sampling = nn.MaxPool2d(kernel_size=2, stride=2)
 
     def _att_layer(self, in_channel, intermediate_channel, out_channel):
         return nn.Sequential(
-            nn.Conv2d(in_channels=in_channel, out_channels=intermediate_channel, kernel_size=1, padding=0),
+            nn.Conv2d(
+                in_channels=in_channel,
+                out_channels=intermediate_channel,
+                kernel_size=1,
+                padding=0,
+            ),
             nn.BatchNorm2d(intermediate_channel),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=intermediate_channel, out_channels=out_channel, kernel_size=1, padding=0),
+            nn.Conv2d(
+                in_channels=intermediate_channel,
+                out_channels=out_channel,
+                kernel_size=1,
+                padding=0,
+            ),
             nn.BatchNorm2d(out_channel),
-            nn.Sigmoid())
+            nn.Sigmoid(),
+        )
 
     def _conv_layer(self, in_channel, out_channel):
-        downsample = nn.Sequential(conv1x1(in_channel, self.expansion * out_channel, stride=1),
-                                   nn.BatchNorm2d(self.expansion * out_channel))
+        downsample = nn.Sequential(
+            conv1x1(in_channel, self.expansion * out_channel, stride=1),
+            nn.BatchNorm2d(self.expansion * out_channel),
+        )
         if self.expansion == 4:
             return Bottleneck(in_channel, out_channel, downsample=downsample)
         else:
@@ -80,7 +114,9 @@ class _transform_resnet_MTAN(nn.Module):
                 else:
                     if ss_rep[i][0].size()[-2:] != att_rep[tn].size()[-2:]:
                         att_rep[tn] = self.down_sampling(att_rep[tn])
-                    att_mask = self.encoder_att[str(i)][tn](torch.cat([ss_rep[i][0], att_rep[tn]], dim=1))
+                    att_mask = self.encoder_att[str(i)][tn](
+                        torch.cat([ss_rep[i][0], att_rep[tn]], dim=1)
+                    )
                 att_rep[tn] = att_mask * ss_rep[i][1]
                 if i < 3:
                     att_rep[tn] = self.encoder_block_att[i](att_rep[tn])
@@ -103,22 +139,36 @@ class MTAN(AbsArchitecture):
 
     """
 
-    def __init__(self, task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs):
-        super(MTAN, self).__init__(task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs)
+    def __init__(
+        self,
+        task_name,
+        encoder_class,
+        decoders,
+        rep_grad,
+        multi_input,
+        device,
+        **kwargs
+    ):
+        super(MTAN, self).__init__(
+            task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs
+        )
 
         self.encoder = self.encoder_class()
         try:
-            callable(eval('self.encoder.layer1'))
-            self.encoder = _transform_resnet_MTAN(self.encoder.to(device), task_name, device)
+            callable(eval("self.encoder.layer1"))
+            self.encoder = _transform_resnet_MTAN(
+                self.encoder.to(device), task_name, device
+            )
         except:
-            self.encoder.resnet_network = _transform_resnet_MTAN(self.encoder.resnet_network.to(device), task_name,
-                                                                 device)
+            self.encoder.resnet_network = _transform_resnet_MTAN(
+                self.encoder.resnet_network.to(device), task_name, device
+            )
 
     def forward(self, inputs, task_name=None):
         out = {}
         if self.multi_input:
             try:
-                callable(eval('self.encoder.resnet_network'))
+                callable(eval("self.encoder.resnet_network"))
                 self.encoder.resnet_network.forward_task = task_name
             except:
                 self.encoder.forward_task = task_name
@@ -133,7 +183,7 @@ class MTAN(AbsArchitecture):
 
     def get_share_params(self):
         try:
-            callable(eval('self.encoder.resnet_network'))
+            callable(eval("self.encoder.resnet_network"))
             r = self.encoder.resnet_network
         except:
             r = self.encoder
@@ -142,18 +192,18 @@ class MTAN(AbsArchitecture):
         p += r.shared_layer.parameters()
         if r != self.encoder:
             for n, param in self.encoder.named_parameters():
-                if 'resnet_network' not in n:
+                if "resnet_network" not in n:
                     p.append(param)
         return p
 
     def zero_grad_share_params(self):
         try:
-            callable(eval('self.encoder.resnet_network'))
+            callable(eval("self.encoder.resnet_network"))
             r = self.encoder.resnet_network
         except:
             r = self.encoder
             for n, m in self.encoder.named_modules():
-                if 'resnet_network' not in n:
+                if "resnet_network" not in n:
                     m.zero_grad()
         r.shared_conv.zero_grad()
         r.shared_layer.zero_grad()

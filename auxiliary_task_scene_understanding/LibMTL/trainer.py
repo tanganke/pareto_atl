@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from torch import Tensor
+from typing import cast, Dict, List, Optional, Tuple
 
 from ._record import _PerformanceMeter
 from .utils import count_parameters
@@ -104,7 +106,6 @@ class Trainer(nn.Module):
         self.meter = _PerformanceMeter(self.task_dict, self.multi_input)
 
     def _prepare_model(self, weighting, architecture, encoder_class, decoders):
-
         class MTLmodel(architecture, weighting):
             def __init__(
                 self,
@@ -127,7 +128,7 @@ class Trainer(nn.Module):
                 )
                 self.init_param()
 
-        self.model :nn.Module = MTLmodel(
+        self.model: nn.Module = MTLmodel(
             task_name=self.task_name,
             encoder_class=encoder_class,
             decoders=decoders,
@@ -170,12 +171,14 @@ class Trainer(nn.Module):
         except:
             loader[1] = iter(loader[0])
             data, label = next(loader[1])
-        data = data.to(self.device, non_blocking=True)
+        data = cast(Tensor, data).to(self.device, non_blocking=True)
         if not self.multi_input:
             for task in self.task_name:
-                label[task] = label[task].to(self.device, non_blocking=True)
+                label[task] = cast(Tensor, label[task]).to(
+                    self.device, non_blocking=True
+                )
         else:
-            label = label.to(self.device, non_blocking=True)
+            label = cast(Tensor, label).to(self.device, non_blocking=True)
         return data, label
 
     def process_preds(self, preds, task_name=None):

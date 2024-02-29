@@ -13,15 +13,23 @@ class _transform_resnet_cross(nn.Module):
         self.task_name = task_name
         self.task_num = len(task_name)
         self.device = device
-        self.resnet_conv = nn.ModuleDict({task: nn.Sequential(encoder_list[tn].conv1, encoder_list[tn].bn1,
-                                                              encoder_list[tn].relu, encoder_list[tn].maxpool) for
-                                          tn, task in enumerate(self.task_name)})
+        self.resnet_conv = nn.ModuleDict(
+            {
+                task: nn.Sequential(
+                    encoder_list[tn].conv1,
+                    encoder_list[tn].bn1,
+                    encoder_list[tn].relu,
+                    encoder_list[tn].maxpool,
+                )
+                for tn, task in enumerate(self.task_name)
+            }
+        )
         self.resnet_layer = nn.ModuleDict({})
         for i in range(4):
             self.resnet_layer[str(i)] = nn.ModuleList([])
             for tn in range(self.task_num):
                 encoder = encoder_list[tn]
-                self.resnet_layer[str(i)].append(eval('encoder.layer' + str(i + 1)))
+                self.resnet_layer[str(i)].append(eval("encoder.layer" + str(i + 1)))
         self.cross_unit = nn.Parameter(torch.ones(4, self.task_num))
 
     def forward(self, inputs):
@@ -32,7 +40,12 @@ class _transform_resnet_cross(nn.Module):
                 if i == 0:
                     ss_rep[i][tn] = self.resnet_layer[str(i)][tn](s_rep[task])
                 else:
-                    cross_rep = sum([self.cross_unit[i - 1][j] * ss_rep[i - 1][j] for j in range(self.task_num)])
+                    cross_rep = sum(
+                        [
+                            self.cross_unit[i - 1][j] * ss_rep[i - 1][j]
+                            for j in range(self.task_num)
+                        ]
+                    )
                     ss_rep[i][tn] = self.resnet_layer[str(i)][tn](cross_rep)
         return ss_rep[3]
 
@@ -50,11 +63,24 @@ class Cross_stitch(AbsArchitecture):
 
     """
 
-    def __init__(self, task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs):
-        super(Cross_stitch, self).__init__(task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs)
+    def __init__(
+        self,
+        task_name,
+        encoder_class,
+        decoders,
+        rep_grad,
+        multi_input,
+        device,
+        **kwargs
+    ):
+        super(Cross_stitch, self).__init__(
+            task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs
+        )
 
         if self.multi_input:
-            raise ValueError('No support Cross Stitch for multiple inputs MTL problem')
+            raise ValueError("No support Cross Stitch for multiple inputs MTL problem")
 
-        self.encoder = nn.ModuleList([self.encoder_class() for _ in range(self.task_num)])
+        self.encoder = nn.ModuleList(
+            [self.encoder_class() for _ in range(self.task_num)]
+        )
         self.encoder = _transform_resnet_cross(self.encoder, task_name, device)

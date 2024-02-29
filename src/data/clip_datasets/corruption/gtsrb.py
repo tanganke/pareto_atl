@@ -13,6 +13,7 @@ from torchvision.datasets.vision import VisionDataset
 
 logger = logging.getLogger(__name__)
 
+
 def find_classes(directory: str) -> Tuple[List[str], Dict[str, int]]:
     """Finds the class folders in a dataset.
 

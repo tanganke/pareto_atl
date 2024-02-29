@@ -6,7 +6,7 @@ import numpy as np
 
 
 class AbsMetric(object):
-    r"""An abstract class for the performance metrics of a task. 
+    r"""An abstract class for the performance metrics of a task.
 
     Attributes:
         record (list): A list of the metric scores in every iteration.
@@ -37,51 +37,44 @@ class AbsMetric(object):
         pass
 
     def reinit(self):
-        r"""Reset :attr:`record` and :attr:`bs` (when an epoch ends).
-        """
+        r"""Reset :attr:`record` and :attr:`bs` (when an epoch ends)."""
         self.record = []
         self.bs = []
 
 
 # accuracy
 class AccMetric(AbsMetric):
-    r"""Calculate the accuracy.
-    """
+    r"""Calculate the accuracy."""
 
     def __init__(self):
         super(AccMetric, self).__init__()
 
     def update_fun(self, pred, gt):
-        r"""
-        """
+        r""" """
         pred = F.softmax(pred, dim=-1).max(-1)[1]
         self.record.append(gt.eq(pred).sum().item())
         self.bs.append(pred.size()[0])
 
     def score_fun(self):
-        r"""
-        """
+        r""" """
         return [(sum(self.record) / sum(self.bs))]
 
 
 # L1 Error
 class L1Metric(AbsMetric):
-    r"""Calculate the Mean Absolute Error (MAE).
-    """
+    r"""Calculate the Mean Absolute Error (MAE)."""
 
     def __init__(self):
         super(L1Metric, self).__init__()
 
     def update_fun(self, pred, gt):
-        r"""
-        """
+        r""" """
         abs_err = torch.abs(pred - gt)
         self.record.append(abs_err.item())
         self.bs.append(pred.size()[0])
 
     def score_fun(self):
-        r"""
-        """
+        r""" """
         records = np.array(self.record)
         batch_size = np.array(self.bs)
         return [(records * batch_size).sum() / (sum(batch_size))]

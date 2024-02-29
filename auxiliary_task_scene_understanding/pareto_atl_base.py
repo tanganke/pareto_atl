@@ -182,6 +182,7 @@ class NYUtrainer(Trainer):
         train_loader, train_batch = self._prepare_dataloaders(train_dataloaders)
         train_batch = max(train_batch) if self.multi_input else train_batch
 
+        step_idx = 0
         for epoch in tqdm(
             range(epoch_start, epoch_end),
             "training epochs",
@@ -216,12 +217,26 @@ class NYUtrainer(Trainer):
                 w = self.model.backward(train_losses, **self.kwargs["weight_args"])
                 self.optimizer.step()
 
+                step_idx = step_idx + 1
             self.meter.record_time("end")
             self.meter.get_score()
             self.meter.display(epoch=epoch, mode="train")
-            self.meter.reinit()
 
-            wandb
+            # record logs to wandb
+            log_dict = {}
+            for task_name in self.meter.task_name:
+                for metric_name, value in zip(
+                    self.meter.task_dict[task_name]["metrics"],
+                    self.meter.results[task_name],
+                ):
+                    log_dict[f"{task_name}_{metric_name}"] = value
+            for task_name, loss_value in zip(
+                self.meter.task_name, self.meter.loss_item
+            ):
+                log_dict[f"{task_name}_loss"] = loss_value
+            wandb.log(log_dict, step=step_idx)
+
+            self.meter.reinit()
 
             if val_dataloaders is not None:
                 self.val(val_dataloaders, epoch)
@@ -268,7 +283,7 @@ class NYUtrainer(Trainer):
         self.meter.record_time("begin")
         with torch.no_grad():
             if not self.multi_input:
-                for batch_index in range(test_batch):
+                for batch_index in tqdm(range(test_batch), 'testing'):
                     test_inputs, test_gts = self._process_data(test_loader)
                     test_preds = self.model(test_inputs)
                     test_preds = self.process_preds(test_preds)
@@ -286,7 +301,7 @@ class NYUtrainer(Trainer):
         self.meter.record_time("end")
         self.meter.get_score()
         results = deepcopy(self.meter.results)
-        self.meter.display(epoch=epoch, mode=mode)
+        # self.meter.display(epoch=epoch, mode=mode)
         self.meter.reinit()
         results = {
             task_name: results[task_name] for task_name in self.params.target_tasks

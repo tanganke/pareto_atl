@@ -10,7 +10,6 @@ from .metrics import AbsMetric
 
 class _PerformanceMeter(object):
     def __init__(self, task_dict, multi_input, base_result=None):
-
         self.task_dict = task_dict
         self.multi_input = multi_input
         self.task_num = len(self.task_dict)

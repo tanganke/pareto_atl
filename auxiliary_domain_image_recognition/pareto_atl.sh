@@ -12,7 +12,7 @@ function pareto_atl_train {
     round_idx=$1
     task_name=$2
 
-    iters_per_epoch=2500
+    iters_per_epoch=500
     python pareto_atl_train.py data/domainnet -s c i p q r s  \
     --seed 0 --workers 8 \
     -t ${target_task} -a ${architecture} \
@@ -52,7 +52,7 @@ function pareto_atl_test {
 }
 
 function pareto_atl {
-    for round_idx in {0..9}
+    for round_idx in {0..2}
     do 
         # train K+1 models for each task
         CUDA_VISIBLE_DEVICES=0 pareto_atl_train ${round_idx} c &
@@ -63,25 +63,18 @@ function pareto_atl {
         CUDA_VISIBLE_DEVICES=5 pareto_atl_train ${round_idx} s &
         wait
         # merge the models
-        CUDA_VISIBLE_DEVICES=6 pareto_atl_merge ${round_idx}
+        pareto_atl_merge ${round_idx}
         # test the merged model
         for step_idx in $(seq 0 50 200)
         do
-        CUDA_VISIBLE_DEVICES=7 step_idx=0 pareto_atl_test logs/domainnet/${architecture}/${target_task}/checkpoints/round=${round_idx}_step=${step_idx}_merged.pth
+            pareto_atl_test logs/domainnet/${architecture}/${target_task}/checkpoints/round=${round_idx}_step=${step_idx}_merged.pth
         done
-        CUDA_VISIBLE_DEVICES=7 pareto_atl_test logs/domainnet/${architecture}/${target_task}/checkpoints/round=${round_idx}_merged.pth
+        pareto_atl_test logs/domainnet/${architecture}/${target_task}/checkpoints/round=${round_idx}_merged.pth
         wait
     done
 }
 
 architecture=resnet101
-
-for target_task in c i p q r s
-do
-    pareto_atl
-done
-
-architecture=vit_base_patch16_224
 
 for target_task in c i p q r s
 do

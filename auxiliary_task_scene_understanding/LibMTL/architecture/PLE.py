@@ -18,21 +18,23 @@ class _transform_resnet_PLE(nn.Module):
         self.forward_task = None
 
         self.specific_layer, self.shared_layer = nn.ModuleDict({}), nn.ModuleDict({})
-        self.specific_layer['0'], self.shared_layer['0'] = nn.ModuleDict({}), nn.ModuleList({})
+        self.specific_layer["0"], self.shared_layer["0"] = nn.ModuleDict(
+            {}
+        ), nn.ModuleList({})
         for task in self.task_name:
-            self.specific_layer['0'][task] = nn.ModuleList([])
+            self.specific_layer["0"][task] = nn.ModuleList([])
             for k in range(self.num_experts[task]):
                 encoder = encoder_dict[task][k]
-                self.specific_layer['0'][task].append(nn.Sequential(encoder.conv1,
-                                                                    encoder.bn1,
-                                                                    encoder.relu,
-                                                                    encoder.maxpool))
-        for k in range(self.num_experts['share']):
-            encoder = encoder_dict['share'][k]
-            self.shared_layer['0'].append(nn.Sequential(encoder.conv1,
-                                                        encoder.bn1,
-                                                        encoder.relu,
-                                                        encoder.maxpool))
+                self.specific_layer["0"][task].append(
+                    nn.Sequential(
+                        encoder.conv1, encoder.bn1, encoder.relu, encoder.maxpool
+                    )
+                )
+        for k in range(self.num_experts["share"]):
+            encoder = encoder_dict["share"][k]
+            self.shared_layer["0"].append(
+                nn.Sequential(encoder.conv1, encoder.bn1, encoder.relu, encoder.maxpool)
+            )
 
         for i in range(1, 5):
             self.specific_layer[str(i)] = nn.ModuleDict({})
@@ -40,23 +42,37 @@ class _transform_resnet_PLE(nn.Module):
                 self.specific_layer[str(i)][task] = nn.ModuleList([])
                 for k in range(self.num_experts[task]):
                     encoder = encoder_dict[task][k]
-                    self.specific_layer[str(i)][task].append(eval('encoder.layer' + str(i)))
+                    self.specific_layer[str(i)][task].append(
+                        eval("encoder.layer" + str(i))
+                    )
             self.shared_layer[str(i)] = nn.ModuleList([])
-            for k in range(self.num_experts['share']):
-                encoder = encoder_dict['share'][k]
-                self.shared_layer[str(i)].append(eval('encoder.layer' + str(i)))
+            for k in range(self.num_experts["share"]):
+                encoder = encoder_dict["share"][k]
+                self.shared_layer[str(i)].append(eval("encoder.layer" + str(i)))
 
         input_size = []
         with torch.no_grad():
-            x = torch.rand([int(s) for s in self.img_size]).unsqueeze(0)  # .to(self.device)
+            x = torch.rand([int(s) for s in self.img_size]).unsqueeze(
+                0
+            )  # .to(self.device)
             input_size.append(x.size().numel())
             for i in range(4):
                 x = self.shared_layer[str(i)][0](x)
                 input_size.append(x.size().numel())
-        self.gate_specific = nn.ModuleDict({task: nn.ModuleList([self._gate_layer(input_size[i],
-                                                                                  self.num_experts['share'] + \
-                                                                                  self.num_experts[task]) \
-                                                                 for i in range(5)]) for task in self.task_name})
+        self.gate_specific = nn.ModuleDict(
+            {
+                task: nn.ModuleList(
+                    [
+                        self._gate_layer(
+                            input_size[i],
+                            self.num_experts["share"] + self.num_experts[task],
+                        )
+                        for i in range(5)
+                    ]
+                )
+                for task in self.task_name
+            }
+        )
 
     def _gate_layer(self, in_channel, out_channel):
         return nn.Sequential(nn.Linear(in_channel, out_channel), nn.Softmax(dim=-1))
@@ -67,12 +83,20 @@ class _transform_resnet_PLE(nn.Module):
             for task in self.task_name:
                 if self.forward_task is not None and task != self.forward_task:
                     continue
-                experts_shared_rep = torch.stack([e(gate_rep[task]) for e in self.shared_layer[str(i)]])
-                experts_specific_rep = torch.stack([e(gate_rep[task]) for e in self.specific_layer[str(i)][task]])
-                selector = self.gate_specific[task][i](torch.flatten(gate_rep[task], start_dim=1))
-                gate_rep[task] = torch.einsum('ij..., ji -> j...',
-                                              torch.cat([experts_shared_rep, experts_specific_rep], dim=0),
-                                              selector)
+                experts_shared_rep = torch.stack(
+                    [e(gate_rep[task]) for e in self.shared_layer[str(i)]]
+                )
+                experts_specific_rep = torch.stack(
+                    [e(gate_rep[task]) for e in self.specific_layer[str(i)][task]]
+                )
+                selector = self.gate_specific[task][i](
+                    torch.flatten(gate_rep[task], start_dim=1)
+                )
+                gate_rep[task] = torch.einsum(
+                    "ij..., ji -> j...",
+                    torch.cat([experts_shared_rep, experts_specific_rep], dim=0),
+                    selector,
+                )
         if self.forward_task is None:
             return gate_rep
         else:
@@ -95,19 +119,36 @@ class PLE(AbsArchitecture):
 
     """
 
-    def __init__(self, task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs):
-        super(PLE, self).__init__(task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs)
+    def __init__(
+        self,
+        task_name,
+        encoder_class,
+        decoders,
+        rep_grad,
+        multi_input,
+        device,
+        **kwargs
+    ):
+        super(PLE, self).__init__(
+            task_name, encoder_class, decoders, rep_grad, multi_input, device, **kwargs
+        )
 
-        self.img_size = self.kwargs['img_size']
+        self.img_size = self.kwargs["img_size"]
         self.input_size = np.array(self.img_size, dtype=int).prod()
-        self.num_experts = {task: self.kwargs['num_experts'][tn + 1] for tn, task in enumerate(self.task_name)}
-        self.num_experts['share'] = self.kwargs['num_experts'][0]
+        self.num_experts = {
+            task: self.kwargs["num_experts"][tn + 1]
+            for tn, task in enumerate(self.task_name)
+        }
+        self.num_experts["share"] = self.kwargs["num_experts"][0]
 
         self.encoder = {}
-        for task in (['share'] + self.task_name):
-            self.encoder[task] = [self.encoder_class() for _ in range(self.num_experts[task])]
-        self.encoder = _transform_resnet_PLE(self.encoder, task_name, self.img_size,
-                                             self.num_experts, device)
+        for task in ["share"] + self.task_name:
+            self.encoder[task] = [
+                self.encoder_class() for _ in range(self.num_experts[task])
+            ]
+        self.encoder = _transform_resnet_PLE(
+            self.encoder, task_name, self.img_size, self.num_experts, device
+        )
 
     def forward(self, inputs, task_name=None):
         out = {}

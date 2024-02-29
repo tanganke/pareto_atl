@@ -233,7 +233,6 @@ class NormalLoss(AbsLoss):
 
 
 class NoiseLoss(AbsLoss):
-
     def __init__(self):
         super(NoiseLoss, self).__init__()
 

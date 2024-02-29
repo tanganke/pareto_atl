@@ -5,7 +5,6 @@ from .abstract_weighting import AbsWeighting
 
 
 class OLAUX(AbsWeighting):
-
     def __init__(self):
         super(OLAUX, self).__init__()
         self.print_interval = 100
@@ -19,19 +18,25 @@ class OLAUX(AbsWeighting):
         self.update_interval = 5
 
     def backward(self, losses, **kwargs):
-        beta = kwargs['beta']
-        pri_idx = kwargs['pri_idx']
+        beta = kwargs["beta"]
+        pri_idx = kwargs["pri_idx"]
         if self.rep_grad:
-            raise ValueError('No support method PCGrad with representation gradients (rep_grad=True)')
+            raise ValueError(
+                "No support method PCGrad with representation gradients (rep_grad=True)"
+            )
         else:
             self._compute_grad_dim()
-            grads = self._compute_grad(losses, mode='backward')  # [task_num, grad_dim]
+            grads = self._compute_grad(losses, mode="backward")  # [task_num, grad_dim]
         pc_grads = grads.clone()
 
         for tn_i in range(self.task_num):
             if tn_i == pri_idx:
                 continue
-            cos_sim = torch.dot(pc_grads[tn_i], pc_grads[pri_idx]) / pc_grads[tn_i].norm() / pc_grads[pri_idx].norm()
+            cos_sim = (
+                torch.dot(pc_grads[tn_i], pc_grads[pri_idx])
+                / pc_grads[tn_i].norm()
+                / pc_grads[pri_idx].norm()
+            )
             self.task_accumulate_cos_sim[tn_i] += (beta * cos_sim).detach().cpu().item()
 
         if (self.cnt + 1) % self.update_interval == 0:

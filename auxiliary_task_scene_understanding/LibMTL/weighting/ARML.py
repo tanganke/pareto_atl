@@ -7,19 +7,20 @@ from .abstract_weighting import AbsWeighting
 
 
 class ARML(AbsWeighting):
-
     def __init__(self):
         super(ARML, self).__init__()
         self.print_interval = 20
         self.cnt = 0
 
     def init_param(self):
-        self.loss_scale = nn.Parameter(torch.tensor([1.0] * self.task_num, device=self.device))
+        self.loss_scale = nn.Parameter(
+            torch.tensor([1.0] * self.task_num, device=self.device)
+        )
 
     def backward(self, losses, **kwargs):
-        pri_idx = kwargs['pri_idx']
+        pri_idx = kwargs["pri_idx"]
 
-        grads = self._get_grads(losses, mode='backward')
+        grads = self._get_grads(losses, mode="backward")
         if self.rep_grad:
             per_grads, grads = grads[0], grads[1]
 
@@ -35,7 +36,7 @@ class ARML(AbsWeighting):
         L_grad.backward()
 
         # self.loss_scale.data = self.loss_scale.data + (self.task_num - self.loss_scale.data.sum()) / self.task_num
-        self.loss_scale.data[pri_idx] = 1.
+        self.loss_scale.data[pri_idx] = 1.0
         loss_weight = self.loss_scale.detach().clone()
 
         if self.rep_grad:

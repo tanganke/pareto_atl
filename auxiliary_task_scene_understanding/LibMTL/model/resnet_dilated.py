@@ -28,7 +28,7 @@ class ResnetDilated(nn.Module):
 
     def _nostride_dilate(self, m, dilate):
         classname = m.__class__.__name__
-        if classname.find('Conv') != -1:
+        if classname.find("Conv") != -1:
             # the convolution with stride
             if m.stride == (2, 2):
                 m.stride = (1, 1)
@@ -52,20 +52,27 @@ class ResnetDilated(nn.Module):
         return x
 
     def forward_stage(self, x, stage):
-        assert (stage in ['conv', 'layer1', 'layer2', 'layer3', 'layer4', 'layer1_without_conv'])
+        assert stage in [
+            "conv",
+            "layer1",
+            "layer2",
+            "layer3",
+            "layer4",
+            "layer1_without_conv",
+        ]
 
-        if stage == 'conv':
+        if stage == "conv":
             x = self.relu(self.bn1(self.conv1(x)))
             x = self.maxpool(x)
             return x
 
-        elif stage == 'layer1':
+        elif stage == "layer1":
             x = self.relu(self.bn1(self.conv1(x)))
             x = self.maxpool(x)
             x = self.layer1(x)
             return x
 
-        elif stage == 'layer1_without_conv':
+        elif stage == "layer1_without_conv":
             x = self.layer1(x)
             return x
 
@@ -80,6 +87,8 @@ def resnet_dilated(basenet, pretrained=True, dilate_scale=8):
     Args:
         basenet (str): The type of ResNet.
         pretrained (bool): If True, returns a model pre-trained on ImageNet.
-        dilate_scale ({8, 16}, default=8): The type of dilating process. 
+        dilate_scale ({8, 16}, default=8): The type of dilating process.
     """
-    return ResnetDilated(resnet.__dict__[basenet](pretrained=pretrained), dilate_scale=dilate_scale)
+    return ResnetDilated(
+        resnet.__dict__[basenet](pretrained=pretrained), dilate_scale=dilate_scale
+    )

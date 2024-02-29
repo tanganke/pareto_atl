@@ -6,8 +6,7 @@ import numpy as np
 
 
 class AbsLoss(object):
-    r"""An abstract class for loss functions. 
-    """
+    r"""An abstract class for loss functions."""
 
     def __init__(self):
         self.record = []
@@ -15,7 +14,7 @@ class AbsLoss(object):
 
     def compute_loss(self, pred, gt):
         r"""Calculate the loss.
-        
+
         Args:
             pred (torch.Tensor): The prediction tensor.
             gt (torch.Tensor): The ground-truth tensor.
@@ -42,8 +41,7 @@ class AbsLoss(object):
 
 
 class CELoss(AbsLoss):
-    r"""The cross-entropy loss function.
-    """
+    r"""The cross-entropy loss function."""
 
     def __init__(self):
         super(CELoss, self).__init__()
@@ -51,15 +49,13 @@ class CELoss(AbsLoss):
         self.loss_fn = nn.CrossEntropyLoss()
 
     def compute_loss(self, pred, gt):
-        r"""
-        """
+        r""" """
         loss = self.loss_fn(pred, gt)
         return loss
 
 
 class KLDivLoss(AbsLoss):
-    r"""The Kullback-Leibler divergence loss function.
-    """
+    r"""The Kullback-Leibler divergence loss function."""
 
     def __init__(self):
         super(KLDivLoss, self).__init__()
@@ -67,15 +63,13 @@ class KLDivLoss(AbsLoss):
         self.loss_fn = nn.KLDivLoss()
 
     def compute_loss(self, pred, gt):
-        r"""
-        """
+        r""" """
         loss = self.loss_fn(pred, gt)
         return loss
 
 
 class L1Loss(AbsLoss):
-    r"""The Mean Absolute Error (MAE) loss function.
-    """
+    r"""The Mean Absolute Error (MAE) loss function."""
 
     def __init__(self):
         super(L1Loss, self).__init__()
@@ -83,15 +77,13 @@ class L1Loss(AbsLoss):
         self.loss_fn = nn.L1Loss()
 
     def compute_loss(self, pred, gt):
-        r"""
-        """
+        r""" """
         loss = self.loss_fn(pred, gt)
         return loss
 
 
 class MSELoss(AbsLoss):
-    r"""The Mean Squared Error (MSE) loss function.
-    """
+    r"""The Mean Squared Error (MSE) loss function."""
 
     def __init__(self):
         super(MSELoss, self).__init__()
@@ -99,7 +91,6 @@ class MSELoss(AbsLoss):
         self.loss_fn = nn.MSELoss()
 
     def compute_loss(self, pred, gt):
-        r"""
-        """
+        r""" """
         loss = self.loss_fn(pred, gt)
         return loss

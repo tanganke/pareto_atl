@@ -21,10 +21,12 @@ class DWA(AbsWeighting):
         super(DWA, self).__init__()
 
     def backward(self, losses, **kwargs):
-        T = kwargs['T']
+        T = kwargs["T"]
         if self.epoch > 1:
             w_i = torch.Tensor(
-                self.train_loss_buffer[:, self.epoch - 1] / self.train_loss_buffer[:, self.epoch - 2]).to(self.device)
+                self.train_loss_buffer[:, self.epoch - 1]
+                / self.train_loss_buffer[:, self.epoch - 2]
+            ).to(self.device)
             batch_weight = self.task_num * F.softmax(w_i / T, dim=-1)
         else:
             batch_weight = torch.ones_like(losses).to(self.device)

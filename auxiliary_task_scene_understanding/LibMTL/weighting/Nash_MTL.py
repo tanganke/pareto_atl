@@ -10,7 +10,7 @@ try:
 except ModuleNotFoundError:
     from pip._internal import main as pip
 
-    pip(['install', '--user', 'cvxpy'])
+    pip(["install", "--user", "cvxpy"])
     import cvxpy as cp
 
 
@@ -43,12 +43,12 @@ class Nash_MTL(AbsWeighting):
 
     def _stop_criteria(self, gtg, alpha_t):
         return (
-                (self.alpha_param.value is None)
-                or (np.linalg.norm(gtg @ alpha_t - 1 / (alpha_t + 1e-10)) < 1e-3)
-                or (
-                        np.linalg.norm(self.alpha_param.value - self.prvs_alpha_param.value)
-                        < 1e-6
-                )
+            (self.alpha_param.value is None)
+            or (np.linalg.norm(gtg @ alpha_t - 1 / (alpha_t + 1e-10)) < 1e-3)
+            or (
+                np.linalg.norm(self.alpha_param.value - self.prvs_alpha_param.value)
+                < 1e-6
+            )
         )
 
     def solve_optimization(self, gtg: np.array):
@@ -109,9 +109,9 @@ class Nash_MTL(AbsWeighting):
         self.prob = cp.Problem(obj, constraint)
 
     def backward(self, losses, **kwargs):
-        self.update_weights_every = kwargs['update_weights_every']
-        self.optim_niter = kwargs['optim_niter']
-        self.max_norm = kwargs['max_norm']
+        self.update_weights_every = kwargs["update_weights_every"]
+        self.optim_niter = kwargs["optim_niter"]
+        self.max_norm = kwargs["max_norm"]
 
         if self.step == 0:
             self._init_optim_problem()
@@ -119,13 +119,17 @@ class Nash_MTL(AbsWeighting):
             self.step += 1
 
             if self.rep_grad:
-                raise ValueError('No support method Nash_MTL with representation gradients (rep_grad=True)')
+                raise ValueError(
+                    "No support method Nash_MTL with representation gradients (rep_grad=True)"
+                )
             else:
                 self._compute_grad_dim()
-                grads = self._compute_grad(losses, mode='autograd')
+                grads = self._compute_grad(losses, mode="autograd")
 
             GTG = torch.mm(grads, grads.t())
-            self.normalization_factor = torch.norm(GTG).detach().cpu().numpy().reshape((1,))
+            self.normalization_factor = (
+                torch.norm(GTG).detach().cpu().numpy().reshape((1,))
+            )
             GTG = GTG / self.normalization_factor.item()
             alpha = self.solve_optimization(GTG.cpu().detach().numpy())
             alpha = torch.from_numpy(alpha).to(torch.float32).to(self.device)

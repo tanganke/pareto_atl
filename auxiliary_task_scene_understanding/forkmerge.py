@@ -41,7 +41,9 @@ def parse_args(parser):
     )
     parser.add_argument("--test_bs", default=8, type=int, help="batch size for test")
     parser.add_argument("--dataset", default="NYUv2", choices=["NYUv2", "Cityscapes"])
-    parser.add_argument("--dataset_path", default="data/nyuv2", type=str, help="dataset path")
+    parser.add_argument(
+        "--dataset_path", default="data/nyuv2", type=str, help="dataset path"
+    )
     parser.add_argument("--n_epochs", default=200, type=int)
     parser.add_argument(
         "--log",
@@ -460,7 +462,7 @@ def main(params):
 
         if params.pretrained is not None:
             print("Loading from ", params.pretrained)
-            cast(NYUtrainer,trainers[topk]).model.load_state_dict(
+            cast(NYUtrainer, trainers[topk]).model.load_state_dict(
                 torch.load(params.pretrained, map_location="cpu"), strict=False
             )
 
@@ -546,7 +548,7 @@ def main(params):
     target_trainer.model.load_state_dict(
         torch.load(logger.get_checkpoint_path("best")), strict=False
     )
-    final_results = target_trainer.test(nyuv2_test_loader, 200, mode="test")
+    final_results = cast(NYUtrainer,target_trainer).test(nyuv2_test_loader, 200, mode="test")
     print("test", final_results)
     logger.close()
 

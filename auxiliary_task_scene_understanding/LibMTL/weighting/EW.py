@@ -17,7 +17,7 @@ class EW(AbsWeighting):
         super(EW, self).__init__()
 
     def backward(self, losses, **kwargs):
-        weights = torch.FloatTensor(kwargs['weights']).to(self.device)
+        weights = torch.FloatTensor(kwargs["weights"]).to(self.device)
         if weights.shape[0] != losses.shape[0]:
             weights = torch.ones_like(losses).to(self.device)
         loss = torch.mul(losses, weights).to(self.device).sum()

@@ -21,7 +21,6 @@ class MGDA(AbsWeighting):
         super(MGDA, self).__init__()
 
     def _find_min_norm_element(self, grads):
-
         def _min_norm_element_from2(v1v1, v1v2, v2v2):
             if v1v2 >= v1v1:
                 gamma = 0.999
@@ -39,7 +38,9 @@ class MGDA(AbsWeighting):
             dmin = 1e8
             for i in range(grad_mat.size()[0]):
                 for j in range(i + 1, grad_mat.size()[0]):
-                    c, d = _min_norm_element_from2(grad_mat[i, i], grad_mat[i, j], grad_mat[j, j])
+                    c, d = _min_norm_element_from2(
+                        grad_mat[i, i], grad_mat[i, j], grad_mat[j, j]
+                    )
                     if d < dmin:
                         dmin = d
                         sol = [(i, j), c, d]
@@ -95,9 +96,21 @@ class MGDA(AbsWeighting):
             grad_dir = -1.0 * torch.matmul(grad_mat, sol_vec)
             new_point = _next_point(sol_vec, grad_dir, n)
 
-            v1v1 = torch.sum(sol_vec.unsqueeze(1).repeat(1, n) * sol_vec.unsqueeze(0).repeat(n, 1) * grad_mat)
-            v1v2 = torch.sum(sol_vec.unsqueeze(1).repeat(1, n) * new_point.unsqueeze(0).repeat(n, 1) * grad_mat)
-            v2v2 = torch.sum(new_point.unsqueeze(1).repeat(1, n) * new_point.unsqueeze(0).repeat(n, 1) * grad_mat)
+            v1v1 = torch.sum(
+                sol_vec.unsqueeze(1).repeat(1, n)
+                * sol_vec.unsqueeze(0).repeat(n, 1)
+                * grad_mat
+            )
+            v1v2 = torch.sum(
+                sol_vec.unsqueeze(1).repeat(1, n)
+                * new_point.unsqueeze(0).repeat(n, 1)
+                * grad_mat
+            )
+            v2v2 = torch.sum(
+                new_point.unsqueeze(1).repeat(1, n)
+                * new_point.unsqueeze(0).repeat(n, 1)
+                * grad_mat
+            )
 
             nc, nd = _min_norm_element_from2(v1v1, v1v2, v2v2)
             new_sol_vec = nc * sol_vec + (1 - nc) * new_point
@@ -107,26 +120,28 @@ class MGDA(AbsWeighting):
             sol_vec = new_sol_vec
 
     def _gradient_normalizers(self, grads, loss_data, ntype):
-        if ntype == 'l2':
+        if ntype == "l2":
             gn = grads.pow(2).sum(-1).sqrt()
-        elif ntype == 'loss':
+        elif ntype == "loss":
             gn = loss_data
-        elif ntype == 'loss+':
+        elif ntype == "loss+":
             gn = loss_data * grads.pow(2).sum(-1).sqrt()
-        elif ntype == 'none':
+        elif ntype == "none":
             gn = torch.ones_like(loss_data).to(self.device)
         else:
-            raise ValueError('No support normalization type {} for MGDA'.format(ntype))
+            raise ValueError("No support normalization type {} for MGDA".format(ntype))
         grads = grads / gn.unsqueeze(1).repeat(1, grads.size()[1])
         return grads
 
     def backward(self, losses, **kwargs):
-        mgda_gn = kwargs['mgda_gn']
-        grads = self._get_grads(losses, mode='backward')
+        mgda_gn = kwargs["mgda_gn"]
+        grads = self._get_grads(losses, mode="backward")
         if self.rep_grad:
             per_grads, grads = grads[0], grads[1]
         loss_data = torch.tensor([loss.item() for loss in losses]).to(self.device)
-        grads = self._gradient_normalizers(grads, loss_data, ntype=mgda_gn)  # l2, loss, loss+, none
+        grads = self._gradient_normalizers(
+            grads, loss_data, ntype=mgda_gn
+        )  # l2, loss, loss+, none
         sol = self._find_min_norm_element(grads)
         if self.rep_grad:
             self._backward_new_grads(sol, per_grads=per_grads)

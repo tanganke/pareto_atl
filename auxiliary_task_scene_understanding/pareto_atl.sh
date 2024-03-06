@@ -1,5 +1,5 @@
 # Pareto Auxiliary-Task Learning
-# tasks: c i p q r s
+# tasks: segmentation depth normal
 
 # wandb group name for each experiment: "domainnet-{args.arch}-{args.target[0]}"
 architecture=HPS
@@ -77,4 +77,33 @@ function pareto_atl {
 for target_task in segmentation depth normal
 do
     pareto_atl
+done
+
+
+# MTL 
+
+function pareto_atl_mtl_test {
+    ckpt_path=$1
+    output_path=$2
+
+    python pareto_atl_test.py \
+        --arch ${architecture} --scheduler step \
+        --source_tasks segmentation depth normal --target_tasks ${test_task} \
+        --ckpt ${ckpt_path} --output_path ${output_path}
+}
+
+target_task=normal
+round=5
+architecture=HPS
+for test_task in segmentation depth normal
+do
+    pareto_atl_mtl_test \
+        logs/nyuv2/HPS/mtl/${target_task}/round=${round}_merged.pth \
+        logs/nyuv2/HPS/mtl/${target_task}/round=${round}_merged-${test_task}.csv
+    # for task in segmentation depth normal
+    # do
+    #     pareto_atl_mtl_test \
+    #         logs/nyuv2/HPS/mtl/${target_task}/round=${round}_task=${task}_trained.pth \
+    #         logs/nyuv2/HPS/mtl/${target_task}/round=${round}_task=${task}_trained-${test_task}.csv
+    # done
 done

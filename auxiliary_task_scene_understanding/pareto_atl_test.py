@@ -89,10 +89,16 @@ class ParetoATL_Testing(pareto_atl_base.ParetoATL):
         state_dict = ckpt["state_dict"]
         self.model.load_state_dict(state_dict)
 
-        final_results = trainer.test(self.nyuv2_test_loader, None,  mode="test")
+        final_results = trainer.test(self.nyuv2_test_loader, None, mode="test")
         logger.info(final_results)
-        
-        pd.DataFrame(final_results).to_csv(params.ckpt.replace('.pth', '.csv'))
+
+        if params.output_path is not None:
+            save_path = params.output_path
+        else:
+            save_path = params.ckpt.replace(".pth", ".csv")
+        pd.DataFrame(final_results).to_csv(save_path)
+        print(f"Results saved to {save_path}")
+        print(f"Results: {pd.DataFrame(final_results)}")
 
 
 def parser_args():
@@ -101,6 +107,12 @@ def parser_args():
         "--ckpt",
         type=str,
         help="ckpt_path",
+    )
+    parser.add_argument(
+        "--output_path",
+        type=str,
+        default=None,
+        help="output path for the results. If not specified, the results will be saved in the same directory as the ckpt file.",
     )
     args = parser.parse_args()
     return args

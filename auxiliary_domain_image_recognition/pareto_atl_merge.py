@@ -84,7 +84,9 @@ def compute_grad(
 class ParetoATL_Merging(pareto_atl_base.ParetoATL):
     def __init__(self, args):
         super().__init__(args)
-
+        if os.path.exists(self.get_checkpoint_path(f"round={args.round_idx}_merged.pth")):
+            print(f"round={args.round_idx}_merged.pth exists, skipping")
+            exit(0)
         wandb.init(
             project="pareto_atl",
             name=args.run_name,

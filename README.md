@@ -1,5 +1,11 @@
 # Pareto Optimality in Model Merging
 
+run the experiments:
+
+```bash
+cd $exp_dir
+bash pareto_atl.sh
+```
 
 ## Acknowledgments
 
